@@ -435,7 +435,7 @@ class SpawnScan(BaseScheduler):
         retset = []
         for step, location in enumerate(self.locations, 1):
             altitude = get_altitude(self.args, [location['lat'],
-                                    location['lng']])
+                                                location['lng']])
             retset.append((step, (location['lat'], location['lng'], altitude),
                            location['appears'], location['leaves']))
 
@@ -504,7 +504,8 @@ class SpeedScan(HexSearch):
 
     # On location change, empty the current queue and the locations list
     def location_changed(self, scan_location, db_update_queue):
-        super(SpeedScan, self).location_changed(scan_location, db_update_queue)
+        super(SpeedScan, self).location_changed(
+            scan_location, db_update_queue)
         self.locations = self._generate_locations()
         scans = {}
         initial = {}
@@ -825,7 +826,8 @@ class SpeedScan(HexSearch):
                              self.spawns_found, spawns_missed, found_percent)
                     self.spawn_percent.append(round(found_percent, 1))
                     if self.spawns_missed_delay:
-                        log.warning('Missed spawn IDs with times after spawn:')
+                        log.warning(
+                            'Missed spawn IDs with times after spawn:')
                         log.warning(self.spawns_missed_delay)
                     log.info('History: %s', str(
                         self.spawn_percent).strip('[]'))
@@ -839,7 +841,8 @@ class SpeedScan(HexSearch):
                 if self.scans_missed_list:
                     log.warning('Missed scans: %s', Counter(
                         self.scans_missed_list).most_common(3))
-                    log.info('History: %s', str(self.scan_percent).strip('[]'))
+                    log.info('History: %s', str(
+                        self.scan_percent).strip('[]'))
                 self.status_message = ('Initial scan: {:.2f}%, TTH found: ' +
                                        '{:.2f}% [{} missing], ').format(
                     band_percent, self.tth_found * 100.0 / self.active_sp,
@@ -1076,7 +1079,8 @@ class KeyScheduler(object):
             self.keys[key] = {
                 'remaining': 0,
                 'maximum': 0,
-                'peak': 0
+                'peak': 0,
+                'expires': 'N/A'
             }
 
         self.key_cycle = itertools.cycle(keys)
