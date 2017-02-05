@@ -149,12 +149,12 @@ function addhash(hash) {
    </div>
  `
 
- hash_table = $(hash_table)
- table.appendTo('#status_container')
- table.find('.status_row.header .status_cell').click(tableSort)
- }
+    hash_table = $(hash_table)
+    table.appendTo('#status_container')
+    table.find('.status_row.header .status_cell').click(tableSort)
+}
 
- function hashtableSort() {
+function hashtableSort() {
      var hash_table = $(this).parents('.status_table').eq(0)
      var hash_row = table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
      this.asc = !this.asc
@@ -167,7 +167,7 @@ function addhash(hash) {
      }
  }
 
- function getHashtableValue(hash_row, index) {
+function getHashtableValue(hash_row, index) {
       return $(hash_row).children('.status_cell').eq(index).html()
      }
 
@@ -335,4 +335,4 @@ $(document).ready(function () {
             updateStatus()
         }
     })
-  })
+})
