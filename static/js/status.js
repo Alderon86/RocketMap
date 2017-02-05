@@ -144,12 +144,11 @@ function addhash(hash) {
          Last Modified
        </div>
      </div>
-   </div>
- `
+   </div>`
 
-    hash_table = $(hash_table)
-    hash_table.appendTo('#status_container')
-    hash_table.find('.status_row.header .status_cell').click(hash_tableSort)
+  hash_table = $(hash_table)
+  hash_table.appendTo('#status_container')
+  hash_table.find('.status_row.header .status_cell').click(hash_tableSort)
 }
 
 function hash_tableSort() {
