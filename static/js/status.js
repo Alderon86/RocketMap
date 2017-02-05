@@ -126,8 +126,8 @@ function parseResult(result) {
 /*
  * Tables
  */
- function addhashtable(hash) {
-    var hash_table = `
+function addhash(hash) {
+    var {hash_table} = `
     <div class="status_table" id="hash_table_${hash}">
      <div class="status_row header">
      <div class="status_cell">
@@ -172,7 +172,7 @@ function parseResult(result) {
      }
 
 function addTable(hash) {
-  var table = `
+  var {table} = `
      <div class="status_table" id="table_${hash}">
        <div class="status_row header">
          <div class="status_cell">
