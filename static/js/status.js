@@ -159,7 +159,7 @@ function hash_tableSort() {
     if (!this.asc) {
       hash_row = hash_row.reverse()
      }
-     for (var i = 0; i < rows.length; i++) {
+     for (var i = 0; i < hash_row.length; i++) {
          hash_table.append(hash_row[i])
      }
 }
@@ -227,6 +227,13 @@ function compare(index) {
     return function (a, b) {
         var valA = getCellValue(a, index)
         var valB = getCellValue(b, index)
+        return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB)
+    }
+}
+function comparehash(index) {
+    return function (a, b) {
+        var valA = getHashtableValue(a, index)
+        var valB = getHashtableValue(b, index)
         return $.isNumeric(valA) && $.isNumeric(valB) ? valA - valB : valA.localeCompare(valB)
     }
 }
