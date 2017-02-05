@@ -166,7 +166,7 @@ function hash_tableSort() {
 
 function getHashtableValue(hash_row, index) {
       return $(hash_row).children('.status_cell').eq(index).html()
-     }
+}
 
 function addTable(hash) {
   var {table} = `
