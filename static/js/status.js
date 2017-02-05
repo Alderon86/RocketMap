@@ -150,11 +150,11 @@ function addhash(hash) {
  `
 
     hash_table = $(hash_table)
-    table.appendTo('#status_container')
-    table.find('.status_row.header .status_cell').click(tableSort)
+    hash_table.appendTo('#status_container')
+    hash_table.find('.status_row.header .status_cell').click(tableSort)
 }
 
-function hashSort() {
+function hash_tableSort() {
      var hash_table = $(this).parents('.status_table').eq(0)
      var hash_row = hash_table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
      this.asc = !this.asc
