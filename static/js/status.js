@@ -153,15 +153,13 @@ function addhash(hash) {
     hash_table.appendTo('#status_container')
     hash_table.find('.status_row.header .status_cell').click(tableSort)
 }
-
 function hash_tableSort() {
      var hash_table = $(this).parents('.status_table').eq(0)
      var hash_row = hash_table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
      this.asc = !this.asc
      if (!this.asc) {
-         hash_row = rows.reverse()
+         hash_row = hash_row.reverse()
      }
-
      for (var i = 0; i < rows.length; i++) {
          hash_table.append(hash_row[i])
      }
