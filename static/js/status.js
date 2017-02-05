@@ -156,14 +156,14 @@ function addhash(hash) {
 
 function hashSort() {
      var hash_table = $(this).parents('.status_table').eq(0)
-     var hash_row = table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
+     var hash_row = hash_table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
      this.asc = !this.asc
      if (!this.asc) {
-         rows = rows.reverse()
+         hash_row = rows.reverse()
      }
 
      for (var i = 0; i < rows.length; i++) {
-         table.append(rows[i])
+         hash_table.append(hash_row[i])
      }
  }
 
