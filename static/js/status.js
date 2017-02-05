@@ -39,7 +39,7 @@ function processMainWorker(i, worker) {
     $('#message_' + hash).html(worker['message'].replace(/\n/g, '<br>'))
 }
 
-function addWorker (mainWorkerHash, workerHash) {
+function addWorker(mainWorkerHash, workerHash) {
     var row = `
      <div id="row_${workerHash}" class="status_row">
        <div id="username_${workerHash}" class="status_cell"/>
@@ -55,7 +55,7 @@ function addWorker (mainWorkerHash, workerHash) {
     $(row).appendTo('#table_' + mainWorkerHash)
 }
 
-function addhashtable (mainWorkerHash, workerHash) {
+function addhashtable(mainWorkerHash, workerHash) {
     var {hash_row} = `
     <div id="hash_row_${workerHash}" class="status_row">
       <div id="hash_key_${workerHash}" class="status_cell hash"/>
@@ -74,12 +74,12 @@ function processWorker(i, worker) {
         mainWorkerHash = hashFnv32a(worker['worker_name'], true)
         if ($('#table_' + mainWorkerHash).length === 0 &&
             ($('#hash_table_' + mainWorkerHash).length === 0)) {
-        return
+            return
+        }
     }
-  }
 
     else {
-      mainWorkerHash = 'global'
+        mainWorkerHash = 'global'
         if ($('#table_global').length === 0) {
             addTable('global')
             addhashtable('global')
@@ -91,7 +91,7 @@ function processWorker(i, worker) {
     }
 
     if ($('#hash_row_' + hash).length === 0) {
-      addhashtable(mainWorkerHash, hash)
+        addhashtable(mainWorkerHash, hash)
     }
 
     var lastModified = new Date(worker['last_modified'])
@@ -114,9 +114,7 @@ function processWorker(i, worker) {
     $('#peak_key_' + hash).html(worker['peak_key'])
     $('#lastmod_' + hash).html(lastModified)
     $('#message_' + hash).html(worker['message'])
-
 }
-
 
 function parseResult(result) {
     if (groupByWorker) {
