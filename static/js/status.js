@@ -40,7 +40,7 @@ function processMainWorker(i, worker) {
 }
 
 function addWorker(mainWorkerHash, workerHash) {
-    var {row} = `
+    var row = `
      <div id="row_${workerHash}" class="status_row">
        <div id="username_${workerHash}" class="status_cell"/>
        <div id="success_${workerHash}"  class="status_cell"/>
@@ -56,7 +56,7 @@ function addWorker(mainWorkerHash, workerHash) {
 }
 
 function addhashtable(mainWorkerHash, workerHash) {
-    var {hash_row} = `
+    var hashrow = `
     <div id="hash_row_${workerHash}" class="status_row">
       <div id="hash_key_${workerHash}" class="status_cell hash"/>
       <div id="maximum_rpm_${workerHash}" class="status_cell"/>
@@ -64,7 +64,7 @@ function addhashtable(mainWorkerHash, workerHash) {
       <div id="peak_key_${workerHash}" class="status_cell"/>
     </div>
     `
-    $(hash_row).appendTo('#hash_table_' + mainWorkerHash)
+    $(hashrow).appendTo('#hashtable_' + mainWorkerHash)
 }
 
 function processWorker(i, worker) {
@@ -73,7 +73,7 @@ function processWorker(i, worker) {
     if (groupByWorker) {
         mainWorkerHash = hashFnv32a(worker['worker_name'], true)
         if ($('#table_' + mainWorkerHash).length === 0 &&
-            ($('#hash_table_' + mainWorkerHash).length === 0)) {
+            ($('#hashtable_' + mainWorkerHash).length === 0)) {
             return
         }
     } else {
@@ -88,7 +88,7 @@ function processWorker(i, worker) {
         addWorker(mainWorkerHash, hash)
     }
 
-    if ($('#hash_row_' + hash).length === 0) {
+    if ($('#hashrow_' + hash).length === 0) {
         addhashtable(mainWorkerHash, hash)
     }
 
@@ -125,7 +125,7 @@ function parseResult(result) {
  * Tables
  */
 function addhash(hash) {
-    var {hash_table} = `
+    var hashtable = `
     <div class="status_table" id="hash_table_${hash}">
      <div class="status_row header">
      <div class="status_cell">
@@ -146,29 +146,29 @@ function addhash(hash) {
      </div>
    </div>`
 
-  hash_table = $(hash_table)
-  hash_table.appendTo('#status_container')
-  hash_table.find('.status_row.header .status_cell').click(hash_tableSort)
+  hashtable = $(hashtable)
+  hashtable.appendTo('#status_container')
+  hashtable.find('.status_row.header .status_cell').click(hashtableSort)
 }
 
-function hash_tableSort() {
-    var hash_table = $(this).parents('.status_table').eq(0)
-    var hash_row = hash_table.find('.status_row:gt(0)').toArray().sort(comparehash($(this).index()))
+function hashtableSort() {
+    var hashtable = $(this).parents('.status_table').eq(0)
+    var hash_row = hashtable.find('.status_row:gt(0)').toArray().sort(comparehash($(this).index()))
     this.asc = !this.asc
     if (!this.asc) {
-        hash_row = hash_row.reverse()
+        hashrow = hashrow.reverse()
     }
-    for (var i = 0; i < hash_row.length; i++) {
-        hash_table.append(hash_row[i])
+    for (var i = 0; i < hashrow.length; i++) {
+        hashtable.append(hashrow[i])
     }
 }
 
-function getHashtableValue(hash_row, index) {
-      return $(hash_row).children('.status_cell').eq(index).html()
+function getHashtableValue(hashrow, index) {
+      return $(hashrow).children('.status_cell').eq(index).html()
 }
 
 function addTable(hash) {
-  var {table} = `
+  var table = `
      <div class="status_table" id="table_${hash}">
        <div class="status_row header">
          <div class="status_cell">
