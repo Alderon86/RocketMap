@@ -39,7 +39,7 @@ function processMainWorker(i, worker) {
     $('#message_' + hash).html(worker['message'].replace(/\n/g, '<br>'))
 }
 
-function addWorker(mainWorkerHash, workerHash) {
+function addWorker (mainWorkerHash, workerHash) {
     var row = `
      <div id="row_${workerHash}" class="status_row">
        <div id="username_${workerHash}" class="status_cell"/>
@@ -55,8 +55,8 @@ function addWorker(mainWorkerHash, workerHash) {
     $(row).appendTo('#table_' + mainWorkerHash)
 }
 
-function addhashtable(mainWorkerHash, workerHash) {
-    var hash_row = `
+function addhashtable (mainWorkerHash, workerHash) {
+    var {hash_row} = `
     <div id="hash_row_${workerHash}" class="status_row">
       <div id="hash_key_${workerHash}" class="status_cell hash"/>
       <div id="maximum_rpm_${workerHash}" class="status_cell"/>
