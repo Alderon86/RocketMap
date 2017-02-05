@@ -82,7 +82,7 @@ function processWorker(i, worker) {
         mainWorkerHash = 'global'
         if ($('#table_global').length === 0) {
             addTable('global')
-            addhashtable('global')
+            addhash('global')
         }
     }
 
