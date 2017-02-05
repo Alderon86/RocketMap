@@ -57,7 +57,7 @@ function addWorker(mainWorkerHash, workerHash) {
 
 function addhashtable(mainWorkerHash, workerHash) {
     var hashrow = `
-    <div id="hash_row_${workerHash}" class="status_row">
+    <div id="hashrow_${workerHash}" class="status_row">
       <div id="hash_key_${workerHash}" class="status_cell hash"/>
       <div id="maximum_rpm_${workerHash}" class="status_cell"/>
       <div id="rpm_left_${workerHash}" class="status_cell"/>
@@ -146,14 +146,14 @@ function addhash(hash) {
      </div>
    </div>`
 
-  hashtable = $(hashtable)
-  hashtable.appendTo('#status_container')
-  hashtable.find('.status_row.header .status_cell').click(hashtableSort)
+    hashtable = $(hashtable)
+    hashtable.appendTo('#status_container')
+    hashtable.find('.status_row.header .status_cell').click(hashtableSort)
 }
 
 function hashtableSort() {
     var hashtable = $(this).parents('.status_table').eq(0)
-    var hash_row = hashtable.find('.status_row:gt(0)').toArray().sort(comparehash($(this).index()))
+    var hashrow = hashtable.find('.status_row:gt(0)').toArray().sort(comparehash($(this).index()))
     this.asc = !this.asc
     if (!this.asc) {
         hashrow = hashrow.reverse()
@@ -164,11 +164,11 @@ function hashtableSort() {
 }
 
 function getHashtableValue(hashrow, index) {
-      return $(hashrow).children('.status_cell').eq(index).html()
+    return $(hashrow).children('.status_cell').eq(index).html()
 }
 
 function addTable(hash) {
-  var table = `
+    var table = `
      <div class="status_table" id="table_${hash}">
        <div class="status_row header">
          <div class="status_cell">
@@ -198,9 +198,9 @@ function addTable(hash) {
        </div>
      </div>`
 
-  table = $(table)
-  table.appendTo('#status_container')
-  table.find('.status_row.header .status_cell').click(tableSort)
+    table = $(table)
+    table.appendTo('#status_container')
+    table.find('.status_row.header .status_cell').click(tableSort)
 }
 
 function tableSort() {
