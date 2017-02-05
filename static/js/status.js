@@ -40,7 +40,7 @@ function processMainWorker(i, worker) {
 }
 
 function addWorker(mainWorkerHash, workerHash) {
-    var row = `
+    var {row} = `
      <div id="row_${workerHash}" class="status_row">
        <div id="username_${workerHash}" class="status_cell"/>
        <div id="success_${workerHash}"  class="status_cell"/>
@@ -76,7 +76,7 @@ function processWorker(i, worker) {
             ($('#hash_table_' + mainWorkerHash).length === 0)) {
             return
         }
-    }
+      }
 
     else {
         mainWorkerHash = 'global'
@@ -154,7 +154,7 @@ function addhash(hash) {
     table.find('.status_row.header .status_cell').click(tableSort)
 }
 
-function hashtableSort() {
+function hashSort() {
      var hash_table = $(this).parents('.status_table').eq(0)
      var hash_row = table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
      this.asc = !this.asc
