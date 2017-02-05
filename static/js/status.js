@@ -154,7 +154,7 @@ function addhash(hash) {
 
 function hash_tableSort() {
     var hash_table = $(this).parents('.status_table').eq(0)
-    var hash_row = hash_table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
+    var hash_row = hash_table.find('.status_row:gt(0)').toArray().sort(comparehash($(this).index()))
     this.asc = !this.asc
     if (!this.asc) {
         hash_row = hash_row.reverse()
