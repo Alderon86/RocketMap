@@ -56,7 +56,7 @@ function addWorker(mainWorkerHash, workerHash) {
 }
 
 function addhashtable(mainWorkerHash, workerHash) {
-  var hash_row = `
+    var hash_row = `
     <div id="hash_row_${workerHash}" class="status_row">
       <div id="hash_key_${workerHash}" class="status_cell hash"/>
       <div id="maximum_rpm_${workerHash}" class="status_cell"/>
@@ -72,11 +72,11 @@ function processWorker(i, worker) {
     var mainWorkerHash
     if (groupByWorker) {
         mainWorkerHash = hashFnv32a(worker['worker_name'], true)
-    if ($('#table_' + mainWorkerHash).length === 0 &&
-        ($('#hash_table_' + mainWorkerHash).length === 0)) {
-            return
-        }
+        if ($('#table_' + mainWorkerHash).length === 0 &&
+            ($('#hash_table_' + mainWorkerHash).length === 0)) {
+        return
     }
+  }
 
     else {
       mainWorkerHash = 'global'
@@ -129,7 +129,7 @@ function parseResult(result) {
  * Tables
  */
  function addhashtable(hash) {
-   var hash_table = `
+    var hash_table = `
     <div class="status_table" id="hash_table_${hash}">
      <div class="status_row header">
      <div class="status_cell">
@@ -156,7 +156,7 @@ function parseResult(result) {
  table.find('.status_row.header .status_cell').click(tableSort)
  }
 
- function tableSort() {
+ function hashtableSort() {
      var hash_table = $(this).parents('.status_table').eq(0)
      var hash_row = table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
      this.asc = !this.asc
@@ -169,7 +169,7 @@ function parseResult(result) {
      }
  }
 
- function getCellValue(hash_row, index) {
+ function getHashtableValue(hash_row, index) {
       return $(hash_row).children('.status_cell').eq(index).html()
      }
 
