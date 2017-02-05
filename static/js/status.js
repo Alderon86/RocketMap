@@ -157,11 +157,11 @@ function hash_tableSort() {
     var hash_row = hash_table.find('.status_row:gt(0)').toArray().sort(compare($(this).index()))
     this.asc = !this.asc
     if (!this.asc) {
-      hash_row = hash_row.reverse()
-     }
-     for (var i = 0; i < hash_row.length; i++) {
-         hash_table.append(hash_row[i])
-     }
+        hash_row = hash_row.reverse()
+    }
+    for (var i = 0; i < hash_row.length; i++) {
+        hash_table.append(hash_row[i])
+    }
 }
 
 function getHashtableValue(hash_row, index) {
