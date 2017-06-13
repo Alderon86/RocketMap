@@ -98,8 +98,98 @@ def check_login(args, account, api, position, proxy_url):
             account['username'], num_tries)
         raise TooManyLoginAttempts('Exceeded login attempts.')
 
+    time.sleep(random.uniform(2, 4))
+
+    # 1 - Try to make an empty request.
+    try:
+        request = api.create_request()
+        request.call()
+        time.sleep(random.uniform(.43, .97))
+    except Exception as e:
+        log.exception('Login for account %s failed.' +
+                      ' Exception in call request: %s', account['username'],
+                      repr(e))
+
+    try:  # 2 - Get Player request.
+        request = api.create_request()
+        request.get_player(
+            player_locale={
+                'country': 'US',
+                'language': 'en',
+                'timezone': 'America/Denver'})
+        request.call()
+        time.sleep(random.uniform(.53, 1.1))
+    except Exception as e:
+        log.exception('Login for account %s failed.' +
+                      ' Exception in get_player: %s', account['username'],
+                      repr(e))
+
+    # 3 - Download Remote Config Version request.
+    try:
+        request = api.create_request()
+        request.download_remote_config_version(platform=1,
+                                               device_manufacturer='Apple',
+                                               device_model='iPhone',
+                                               locale=args.locale,
+                                               app_version=int(
+                                                args.api_version.replace(
+                                                    '.', '0')))
+        request.call()
+    except Exception as e:
+        log.exception('Error while downloading remote config: %s.', repr(e))
+
+    # 4 - Get Asset Digest request.
+    try:
+        request = api.create_request()
+        request.get_asset_digest(platform=1, device_manufacturer='Apple',
+                                 device_model='iPhone', locale=args.locale,
+                                 app_version=int(
+                                    args.api_version.replace('.', '0')))
+        request.call()
+        time.sleep(random.uniform(.53, 1.1))
+    except Exception as e:
+        log.exception('Error while downloading Asset Digest: %s.', repr(e))
+
+    # 5 - Download Item Templates request.
+    try:
+        api.download_item_templates()
+    except Exception as e:
+        log.exception('Downloading Item Templates failed: %s', repr(e))
+
+    try:  # 6 - get_player_profile
+        request = api.create_request()
+        request.get_player_profile()
+        request.check_challenge()
+        request.get_hatched_eggs()
+        request.get_inventory()
+        request.check_awarded_badges()
+        request.download_settings()
+        request.get_buddy_walked()
+        request.call()
+        time.sleep(random.uniform(.2, .3))
+    except Exception as e:
+        log.exception('Login for account %s failed. Exception in ' +
+                      'get_player_profile: %s', account['username'], repr(e))
+
+    try:  # 7 - level_up_rewards
+        request = api.create_request()
+        request.level_up_rewards()
+        request.check_challenge()
+        request.get_hatched_eggs()
+        request.get_inventory()
+        request.check_awarded_badges()
+        request.download_settings()
+        request.get_buddy_walked()
+        request.call()
+        time.sleep(random.uniform(.45, .7))
+    except Exception as e:
+        log.exception('Login for account %s failed. Exception in ' +
+                      'level_up_rewards: %s', account['username'], repr(e))
+
+    # TODO: # 8 Make a request to get Shop items.
+
     log.debug('Login for account %s successful.', account['username'])
-    time.sleep(20)
+    time.sleep(random.uniform(10, 20))
 
 
 # Check if all important tutorial steps have been completed.
