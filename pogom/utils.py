@@ -636,7 +636,8 @@ def get_args():
                 'username': username,
                 'password': args.password[i],
                 'level': 1,  # Set possible default for initial functionality
-                'captcha': False
+                'captcha': False,
+                'shadowban': False
             })
 
         # Prepare the L30 accounts for the account sets.
@@ -668,7 +669,8 @@ def get_args():
                         'username': username,
                         'password': password,
                         'level': 30,  # you should be sure about it.
-                        'captcha': False
+                        'captcha': False,
+                        'shadowban': False
                     }
 
                     args.accounts_L30.append(hlvl_account)

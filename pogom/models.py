@@ -116,8 +116,8 @@ class Account(BaseModel):
     level = SmallIntegerField(index=True, null=True)
     in_use = BooleanField(index=True, default=False)
     instance_name = CharField(index=True, null=True, max_length=64)
-    captcha = BooleanField(index=True, default=False)
-    shadowban = BooleanField(index=True, default=False)
+    captcha = BooleanField(index=True)
+    shadowban = BooleanField(index=True)
     last_modified = DateTimeField(null=True, index=True,
                                   default=datetime.utcnow)
 
