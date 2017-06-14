@@ -10,6 +10,7 @@ import gc
 import time
 import geopy
 import math
+
 from peewee import (InsertQuery, Check, CompositeKey, ForeignKeyField,
                     SmallIntegerField, IntegerField, CharField, DoubleField,
                     BooleanField, DateTimeField, fn, DeleteQuery, FloatField,
@@ -32,7 +33,6 @@ from .utils import (get_pokemon_name, get_pokemon_rarity, get_pokemon_types,
                     get_move_type, clear_dict_response, calc_pokemon_level)
 from .transform import transform_from_wgs_to_gcj, get_new_coords
 from .customLog import printPokemon
-
 from .account import (tutorial_pokestop_spin, get_player_level, check_login,
                       setup_api, encounter_pokemon_request)
 
@@ -43,6 +43,13 @@ flaskDb = FlaskDB()
 cache = TTLCache(maxsize=100, ttl=60 * 5)
 
 db_schema_version = 19
+
+
+class Shadowbanned(Exception):
+    def __init__(self, account, missed_ids=[], final=False):
+        self.account = account
+        self.missed_ids = missed_ids
+        self.final = final
 
 
 class MyRetryDB(RetryOperationalError, PooledMySQLDatabase):
@@ -98,6 +105,138 @@ class BaseModel(flaskDb.Model):
                     transform_from_wgs_to_gcj(
                         result['latitude'], result['longitude'])
         return results
+
+
+# The account DB model provides methods for various tasks in relation to
+# account handling in RM.
+class Account(BaseModel):
+    auth_service = CharField(max_length=5)
+    username = CharField(primary_key=True, max_length=64)
+    password = CharField(max_length=64)
+    level = SmallIntegerField(index=True, null=True)
+    in_use = BooleanField(index=True, default=False)
+    instance_name = CharField(index=True, null=True, max_length=64)
+    captcha = BooleanField(index=True, default=False)
+    shadowban = BooleanField(index=True, default=False)
+    last_modified = DateTimeField(null=True, index=True,
+                                  default=datetime.utcnow)
+
+    # Clears all DB accounts, used when --clear-db-accounts
+    @staticmethod
+    def clear_all():
+        return DeleteQuery(Account).execute()
+
+    # Inserts accounts to the DB
+    @staticmethod
+    def insert_accounts(accounts):
+        Account.insert_many(accounts).execute()
+
+    # Gets requested accounts from DB, sorted by lowest level and
+    # oldest last_modified. Mark fetched accounts with in_use and instance_name
+    @staticmethod
+    def get_accounts(number, min_level=1, max_level=40):
+        query = (Account
+                 .select()
+                 .where((Account.in_use == 0) &
+                        (Account.shadowban == 0) &
+                        (Account.level >= min_level) &
+                        (Account.level <= max_level))
+                 .order_by(Account.level.asc(), Account.last_modified.asc())
+                 .limit(number)
+                 .dicts())
+
+        # Directly set accounts to in_use with the instance_name
+        usernames = [dba['username'] for dba in query]
+        (Account.update(in_use=True, instance_name=args.status_name)
+                .where((Account.username << usernames))
+                .execute())
+
+        accounts = []
+        for a in query:
+            accounts.append(a)
+
+        log.debug('Got {} accounts.'.format(len(accounts)))
+        return accounts
+
+    # Fetches all captcha'd accounts for captcha handling (later)
+    @staticmethod
+    def get_captchad():
+        query = Account.select().where((Account.captcha == 1)).dicts()
+        return list(query.values())
+
+    # Resets all instance-flagged accounts to set them free for re-use
+    @staticmethod
+    def reset_instance():
+        return (Account.update(in_use=False, instance_name=None)
+                       .where(Account.instance_name == args.status_name)
+                       .execute())
+
+    # Compares newly specified accounts from csv with existing DB accounts
+    @staticmethod
+    def find_new(accounts):
+        usernames = [a['username'] for a in accounts]
+
+        query = (Account
+                 .select(Account.username)
+                 .where(Account.username << usernames)
+                 .dicts())
+
+        db_usernames = [dbu['username'] for dbu in query]
+
+        # Performance:  disable the garbage collector prior to creating a
+        # (potentially) large dict with append().
+        gc.disable()
+
+        new_accounts = []
+        for ca in accounts:
+            if ca['username'] in db_usernames:  # Not new. Next one.
+                continue
+
+            new_accounts.append(ca)
+
+        # Re-enable the GC.
+        gc.enable()
+        log.debug('Found {} new accounts.'.format(len(new_accounts)))
+
+        return new_accounts
+
+    # Updates the DB account after an action to show it's still in use
+    @staticmethod
+    def heartbeat(account):
+        print "Heartbeat {} at {}".format(account['username'],datetime.utcnow())
+        (Account(username=account['username'],
+                 in_use=True,
+                 instance_name=args.status_name,
+                 last_modified=datetime.utcnow())
+         .save())
+
+    @staticmethod
+    def set_level(account):
+        (Account(username=account['username'],
+                 level=account['level'])
+         .save())
+
+    # Resets instance-flags of accounts to set them free for re-use
+    @staticmethod
+    def set_free(account):
+        (Account(username=account['username'],
+                 in_use=False,
+                 instance_name=None)
+         .save())
+
+    # Sets or resets the captcha flag of an account
+    @staticmethod
+    def set_captcha(account, captcha=True):
+        (Account(username=account['username'],
+                 captcha=captcha)
+         .save())
+
+    # Sets the shadowban flag of an account
+    @staticmethod
+    def set_shadowban(account):
+        (Account(username=account['username'],
+                 shadowban=True)
+         .save())
 
 
 class Pokemon(BaseModel):
@@ -394,6 +533,46 @@ class Pokemon(BaseModel):
             del sp['count']
 
         return list(spawnpoints.values())
+
+    @classmethod
+    def get_pokemons_nearby(cls, center, timestamp):
+
+        # Maximum distance, where we see pokemons nearby
+        visible_distance = 200
+
+        # Get box of visible distance
+        start = geopy.distance.distance(meters=visible_distance)
+        sw = start.destination(center, 225).format_decimal()
+        sw = [float(s) for s in sw.split(',')]
+        ne = start.destination(center, 45).format_decimal()
+        ne = [float(s) for s in ne.split(',')]
+
+        swLat = sw[0]
+        swLng = sw[1]
+        neLat = ne[0]
+        neLng = ne[1]
+
+        # Get active pokemons on those borders
+        query = (Pokemon
+                 .select(Pokemon.latitude.alias('lat'),
+                         Pokemon.longitude.alias('lng'),
+                         Pokemon.pokemon_id)
+                 .where((Pokemon.disappear_time >= timestamp) &
+                        ((Pokemon.latitude >= swLat) &
+                         (Pokemon.longitude >= swLng) &
+                         (Pokemon.latitude <= neLat) &
+                         (Pokemon.longitude <= neLng)))
+                 .dicts())
+        p = list(query)
+
+        # Remove pokemons outside visible circle
+        pokemons = []
+        for idx, sp in enumerate(p):
+            if geopy.distance.distance(
+                    center, (sp['lat'], sp['lng'])).meters <= visible_distance:
+                pokemons.append(p[idx]['pokemon_id'])
+
+        return pokemons
 
     @classmethod
     def get_spawnpoints_in_hex(cls, center, steps):
@@ -1769,7 +1948,7 @@ def hex_bounds(center, steps=None, radius=None):
 
 # todo: this probably shouldn't _really_ be in "models" anymore, but w/e.
 def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
-              key_scheduler, api, status, now_date, account, account_sets):
+              key_scheduler, api, status, now_date, account):
     pokemon = {}
     pokestops = {}
     gyms = {}
@@ -1777,15 +1956,23 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
     stopsskipped = 0
     forts = []
     forts_count = 0
+    encountered_pokemon = []
+    encountered_pokemon_ids = []
     wild_pokemon = []
     wild_pokemon_count = 0
-    nearby_pokemon = 0
+    nearby_pokemon = []
+    nearby_pokemon_ids = []
+    nearby_pokemon_count = 0
     spawn_points = {}
     scan_spawn_points = {}
     sightings = {}
     new_spawn_points = []
     sp_id_list = []
     captcha_url = ''
+    missed = []
+    common_ids = [16, 19, 23, 27, 29, 32, 41, 43, 46, 52, 54, 60, 69,
+                  72, 74, 77, 81, 98, 118, 120, 129, 161, 165, 167,
+                  177, 183, 187, 191, 194, 198, 209, 218]
 
     # Consolidate the individual lists in each cell into two lists of Pokemon
     # and a list of forts.
@@ -1805,13 +1992,14 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
             now_date = datetime.utcfromtimestamp(
                 cell['current_timestamp_ms'] / 1000)
 
-        nearby_pokemon += len(cell.get('nearby_pokemons', []))
+        nearby_pokemon_count += len(cell.get('nearby_pokemons', []))
         # Parse everything for stats (counts).  Future enhancement -- we don't
         # necessarily need to know *how many* forts/wild/nearby were found but
         # we'd like to know whether or not *any* were found to help determine
         # if a scan was actually bad.
         if config['parse_pokemon']:
             wild_pokemon += cell.get('wild_pokemons', [])
+            nearby_pokemon += cell.get('nearby_pokemons', [])
 
         if config['parse_pokestops'] or config['parse_gyms']:
             forts += cell.get('forts', [])
@@ -1830,7 +2018,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
     del map_dict['responses']['GET_MAP_OBJECTS']
 
     # If there are no wild or nearby Pokemon . . .
-    if not wild_pokemon and not nearby_pokemon:
+    if not wild_pokemon and not nearby_pokemon_count:
         # . . . and there are no gyms/pokestops then it's unusable/bad.
         if not forts:
             log.warning('Bad scan. Parsing found absolutely nothing.')
@@ -1845,6 +2033,39 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
     done_already = scan_loc['done']
     ScannedLocation.update_band(scan_loc, now_date)
     just_completed = not done_already and scan_loc['done']
+
+    # Checking if account is blinded
+    if (nearby_pokemon or wild_pokemon) and config['parse_pokemon']:
+
+        # Create list of present pokemon IDs for blinded check
+        for p in nearby_pokemon:
+            nearby_pokemon_ids.append(p.get('pokemon_id', 0))
+        for p in wild_pokemon:
+            nearby_pokemon_ids.append(p.get('pokemon_data', {})
+                                      .get('pokemon_id', 0))
+
+        # Remove common pokemons from seen
+        rare_finds = [p for p in nearby_pokemon_ids if p not in common_ids]
+
+        # Checking if found only common pokemons
+        if len(rare_finds) == 0:
+            # Get nearby active pokemons from database
+            encountered_pokemon_ids = Pokemon.get_pokemons_nearby(
+                step_location, now_date)
+
+            for p in encountered_pokemon_ids:
+                if ((p not in nearby_pokemon_ids) and (p not in common_ids)):
+                    missed.append(p)
+
+            if missed:
+                raise Shadowbanned(account, missed, True)
+
+            status['nonrares'] += 1
+            if status['nonrares'] >= 20:
+                raise Shadowbanned(account)
+        # reset counter if rares are found
+        else:
+            status['nonrares'] = 0
 
     if wild_pokemon and config['parse_pokemon']:
         encounter_ids = [b64encode(str(p['encounter_id']))
@@ -1946,7 +2167,6 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
 
                 hlvl_account = None
                 hlvl_api = None
-                using_accountset = False
 
                 scan_location = [p['latitude'], p['longitude']]
 
@@ -1956,12 +2176,8 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                     hlvl_account = account
                     hlvl_api = api
                 else:
-                    # Get account to use for IV and CP scanning.
-                    hlvl_account = account_sets.next('30', scan_location)
-
-                # If we don't have an API object yet, it means we didn't re-use
-                # an old one, so we're using AccountSet.
-                using_accountset = not hlvl_api
+                    # Get one account to use for IV and CP scanning.
+                    hlvl_account = Account.get_accounts(1, min_level=30)[-1]
 
                 # If we didn't get an account, we can't encounter.
                 if hlvl_account:
@@ -1972,12 +2188,6 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                               hlvl_account['username'],
                               scan_location[0],
                               scan_location[1])
-
-                    # If not args.no_api_store is enabled, we need to
-                    # re-use an old API object if it's stored and we're
-                    # using an account from the AccountSet.
-                    if not args.no_api_store and using_accountset:
-                        hlvl_api = hlvl_account.get('api', None)
 
                     # Make new API for this account if we're not using an
                     # API that's already logged in.
@@ -1994,10 +2204,6 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                                       + ' encounter.', key)
                             hlvl_api.activate_hash_server(key)
 
-                    # We have an API object now. If necessary, store it.
-                    if using_accountset and not args.no_api_store:
-                        hlvl_account['api'] = hlvl_api
-
                     # Set location.
                     hlvl_api.set_position(*scan_location)
 
@@ -2011,6 +2217,9 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                         p['encounter_id'],
                         p['spawn_point_id'],
                         scan_location)
+
+                    # We don't want to tie an hlvl_account to an instance
+                    Account.set_free(hlvl_account)
 
                     # Handle errors.
                     if encounter_result:
@@ -2042,21 +2251,9 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                                                 + ' is only level '
                                                 + encounter_level + '.')
 
-                        # We're done with the encounter. If it's from an
-                        # AccountSet, release account back to the pool.
-                        if using_accountset:
-                            account_sets.release(hlvl_account)
-
                         # Clear the response for memory management.
                         encounter_result = clear_dict_response(
                             encounter_result)
-                    else:
-                        # Something happened. Clean up.
-
-                        # We're done with the encounter. If it's from an
-                        # AccountSet, release account back to the pool.
-                        if using_accountset:
-                            account_sets.release(hlvl_account)
                 else:
                     log.error('No L30 accounts are available, please'
                               + ' consider adding more. Skipping encounter.')
@@ -2266,7 +2463,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
 
     log.info('Parsing found Pokemon: %d, nearby: %d, pokestops: %d, gyms: %d.',
              len(pokemon) + skipped,
-             nearby_pokemon,
+             nearby_pokemon_count,
              len(pokestops) + stopsskipped,
              len(gyms))
 
@@ -2295,8 +2492,8 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                             sp['kind'], sp['id'], sp['missed_count'])
                 log.info('Possible causes: Still doing initial scan, super'
                          ' rare double spawnpoint during')
-                log.info('hidden period, or Niantic has removed '
-                         'spawnpoint.')
+                log.info('hidden period, Niantic has removed '
+                         'spawnpoint or shadowbanned account.')
 
         if (not SpawnPoint.tth_found(sp) and scan_loc['done'] and
                 (now_secs - sp['latest_seen'] -
@@ -2314,6 +2511,12 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
 
     db_update_queue.put((ScannedLocation, {0: scan_loc}))
 
+    # Show the DB this account is still in use
+    Account.heartbeat(account)
+
+    if level != account['level']:
+        account['level'] = level
+        Account.set_level(account)
     if pokemon:
         db_update_queue.put((Pokemon, pokemon))
     if pokestops:
@@ -2326,7 +2529,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
         if sightings:
             db_update_queue.put((SpawnpointDetectionData, sightings))
 
-    if not nearby_pokemon and not wild_pokemon:
+    if not nearby_pokemon_count and not wild_pokemon:
         # After parsing the forts, we'll mark this scan as bad due to
         # a possible speed violation.
         return {
@@ -2524,6 +2727,14 @@ def db_updater(args, q, db):
 def clean_db_loop(args):
     while True:
         try:
+            # Some quite inactive Accounts in the DB? Reset them.
+            query = (Account
+                     .update(in_use=False, instance_name=None)
+                     .where((Account.in_use == 1) &
+                            (Account.last_modified <
+                             (datetime.utcnow() - timedelta(minutes=60))))
+                     .execute())
+
             query = (MainWorker
                      .delete()
                      .where((MainWorker.last_modified <
@@ -2629,7 +2840,7 @@ def bulk_upsert(cls, data, db):
 
 def create_tables(db):
     db.connect()
-    tables = [Pokemon, Pokestop, Gym, ScannedLocation, GymDetails,
+    tables = [Account, Pokemon, Pokestop, Gym, ScannedLocation, GymDetails,
               GymMember, GymPokemon, Trainer, MainWorker, WorkerStatus,
               SpawnPoint, ScanSpawnPoint, SpawnpointDetectionData,
               Token, LocationAltitude, HashKeys]
@@ -2643,7 +2854,7 @@ def create_tables(db):
 
 
 def drop_tables(db):
-    tables = [Pokemon, Pokestop, Gym, ScannedLocation, Versions,
+    tables = [Account,  Pokemon, Pokestop, Gym, ScannedLocation, Versions,
               GymDetails, GymMember, GymPokemon, Trainer, MainWorker,
               WorkerStatus, SpawnPoint, ScanSpawnPoint,
               SpawnpointDetectionData, LocationAltitude,

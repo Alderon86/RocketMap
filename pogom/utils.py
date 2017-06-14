@@ -261,6 +261,10 @@ def get_args():
                         help=('Deletes the existing database before ' +
                               'starting the Webserver.'),
                         action='store_true', default=False)
+    parser.add_argument('-cda', '--clear_db_accounts',
+                        help=('Deletes the existing accounts in the ' +
+                              'database before starting the Scanners.'),
+                        action='store_true', default=False)
     parser.add_argument('-np', '--no-pokemon',
                         help=('Disables Pokemon from the map (including ' +
                               'parsing them into local db.)'),
@@ -627,9 +631,13 @@ def get_args():
         # Make the accounts list.
         args.accounts = []
         for i, username in enumerate(args.username):
-            args.accounts.append({'username': username,
-                                  'password': args.password[i],
-                                  'auth_service': args.auth_service[i]})
+            args.accounts.append({
+                'auth_service': args.auth_service[i],
+                'username': username,
+                'password': args.password[i],
+                'level': 1,  # Set possible default for initial functionality
+                'captcha': False
+            })
 
         # Prepare the L30 accounts for the account sets.
         args.accounts_L30 = []
@@ -659,6 +667,7 @@ def get_args():
                         'auth_service': service,
                         'username': username,
                         'password': password,
+                        'level': 30,  # you should be sure about it.
                         'captcha': False
                     }
 
