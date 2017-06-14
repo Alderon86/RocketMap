@@ -23,7 +23,7 @@ from threading import Thread
 from pgoapi import PGoApi
 from .fakePogoApi import FakePogoApi
 
-from .models import Token
+from .models import Token, Account
 from .transform import jitter_location
 from .account import check_login
 from .proxy import get_new_proxy
@@ -33,7 +33,7 @@ from .utils import now
 log = logging.getLogger(__name__)
 
 
-def captcha_overseer_thread(args, account_queue, account_captchas,
+def captcha_overseer_thread(args, account_captchas,
                             key_scheduler, wh_queue):
     solverId = 0
     while True:
@@ -54,7 +54,7 @@ def captcha_overseer_thread(args, account_queue, account_captchas,
 
                 t = Thread(target=captcha_solver_thread,
                            name='captcha-solver-{}'.format(solverId),
-                           args=(args, account_queue, account_captchas,
+                           args=(args, account_captchas,
                                  hash_key, wh_queue, tokens[i]))
                 t.daemon = True
                 t.start()
@@ -88,7 +88,7 @@ def captcha_overseer_thread(args, account_queue, account_captchas,
 
                         t = Thread(target=captcha_solver_thread,
                                    name='captcha-solver-{}'.format(solverId),
-                                   args=(args, account_queue, account_captchas,
+                                   args=(args, account_captchas,
                                          hash_key, wh_queue))
                         t.daemon = True
                         t.start()
@@ -104,7 +104,7 @@ def captcha_overseer_thread(args, account_queue, account_captchas,
         time.sleep(sleep_timer)
 
 
-def captcha_solver_thread(args, account_queue, account_captchas, hash_key,
+def captcha_solver_thread(args, account_captchas, hash_key,
                           wh_queue, token=None):
     status, account, captcha_url = account_captchas.popleft()
 
@@ -160,8 +160,9 @@ def captcha_solver_thread(args, account_queue, account_captchas, hash_key,
             "Account {} successfully uncaptcha'd, returning to " +
             'active duty.').format(account['username'])
         log.info(status['message'])
-        account_queue.put(account)
         wh_message['status'] = 'success'
+        Account.set_captcha(account, captcha=False)
+        Account.set_free(account)
     else:
         status['message'] = (
             'Account {} failed verifyChallenge, putting back ' +
@@ -183,6 +184,7 @@ def handle_captcha(args, status, api, account, account_failures,
             'CHECK_CHALLENGE']['challenge_url']
         if len(captcha_url) > 1:
             status['captcha'] += 1
+            Account.set_captcha(account)
             if not args.captcha_solving:
                 status['message'] = ('Account {} has encountered a captcha. ' +
                                      'Putting account away.').format(
@@ -280,6 +282,8 @@ def automatic_captcha_solve(args, status, api, captcha_url, account, wh_queue):
                 wh_message['status'] = 'success'
                 wh_message['time'] = time_elapsed
                 wh_queue.put(('captcha', wh_message))
+
+            Account.set_captcha(account, captcha=False)
 
             return True
         else:

@@ -23,7 +23,7 @@ from pogom.altitude import get_gmaps_altitude
 
 from pogom.search import search_overseer_thread
 from pogom.models import (init_database, create_tables, drop_tables,
-                          Pokemon, db_updater, clean_db_loop,
+                          Account, Pokemon, db_updater, clean_db_loop,
                           verify_table_encoding, verify_database_schema)
 from pogom.webhook import wh_updater
 
@@ -311,6 +311,25 @@ def main():
             t.start()
         else:
             log.info('Periodical proxies refresh disabled.')
+
+        # Clear all DB accounts on start-up if requested
+        if args.clear_db_accounts:
+            log.info('Clearing all accounts in DB.')
+            Account.clear_all()
+
+        # We don't want to insert duplicates due to performance
+        new_accounts = Account.find_new(args.accounts)
+        if new_accounts:
+            log.debug('Adding new accounts to DB: {}'.format(
+                     [a['username'] for a in new_accounts]))
+            Account.insert_accounts(new_accounts)
+
+        if args.high_lvl_accounts:
+            log.debug('Adding new high level accounts to DB: {}'.format(
+                     [a['username'] for a in args.accounts_L30]))
+            Account.insert_accounts(args.accounts_L30)
+
+        Account.reset_instance()  # Free all previous accounts of that instance
 
         # Gather the Pokemon!
 
