@@ -292,6 +292,40 @@ def main():
     config['ROOT_PATH'] = app.root_path
     config['GMAPS_KEY'] = args.gmaps_key
 
+    # Clear all DB accounts on start-up if requested.
+    if args.clear_db_accounts:
+        log.info('Clearing all accounts in DB.')
+        Account.clear_all()
+
+    # DB account management
+    if args.add_db_accounts:
+        log.info('Checking for new accounts and inserting into DB.')
+
+        # We only want to insert an account once, due to performance.
+        new_accounts = Account.find_new(args.accounts)
+        new_high_lvl_accounts = Account.find_new(args.accounts_L30)
+
+        if new_accounts:
+            log.debug(
+                'Adding new accounts to DB: {}'.format(
+                    [a['username'] for a in new_accounts]))
+            Account.insert_accounts(new_accounts)
+            log.info('Added {} new accounts to DB.'.format(
+                len(new_accounts)))
+
+        if new_high_lvl_accounts:
+            log.debug(
+                'Adding new high level accounts to DB: {}'.format(
+                     [a['username'] for a in new_high_lvl_accounts]))
+            Account.insert_accounts(new_high_lvl_accounts)
+            log.info('Added {} new high level accounts to DB.'.format(
+                len(new_high_lvl_accounts)))
+
+        log.info('Finished DB account process. ' +
+                 'You can start your regular instances now')
+        log.info('This instance is being exited intentionally.')
+        sys.exit()
+
     if not args.only_server:
 
         # Abort if we don't have a hash key set
@@ -311,25 +345,6 @@ def main():
             t.start()
         else:
             log.info('Periodical proxies refresh disabled.')
-
-        # Clear all DB accounts on start-up if requested
-        if args.clear_db_accounts:
-            log.info('Clearing all accounts in DB.')
-            Account.clear_all()
-
-        # We don't want to insert duplicates due to performance
-        new_accounts = Account.find_new(args.accounts)
-        if new_accounts:
-            log.debug('Adding new accounts to DB: {}'.format(
-                     [a['username'] for a in new_accounts]))
-            Account.insert_accounts(new_accounts)
-
-        if args.high_lvl_accounts:
-            log.debug('Adding new high level accounts to DB: {}'.format(
-                     [a['username'] for a in args.accounts_L30]))
-            Account.insert_accounts(args.accounts_L30)
-
-        Account.reset_instance()  # Free all previous accounts of that instance
 
         # Gather the Pokemon!
 
