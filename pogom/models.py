@@ -173,10 +173,11 @@ class Account(BaseModel):
             accounts.append(a)
 
         # Sets free all instance-flagged accounts which are not in use anymore
-        (Account.update(in_use=False, instance_name=None)
-                .where((Account.instance_name == args.status_name) &
-                       ~(Account.username << usernames))
-                .execute())
+        if init:
+            (Account.update(in_use=False, instance_name=None)
+                    .where((Account.instance_name == args.status_name) &
+                           ~(Account.username << usernames))
+                    .execute())
 
         log.debug('Got {} accounts.'.format(len(accounts)))
         return accounts
