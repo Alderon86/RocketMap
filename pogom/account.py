@@ -151,13 +151,6 @@ def check_login(args, account, api, position, proxy_url):
         api.download_item_templates()
     except Exception as e:
         log.exception('Downloading Item Templates failed: %s', repr(e))
-        
-    # Check tutorial completion.
-    if not all(x in account['tutorials'] for x in (0, 1, 3, 4, 7)):
-        log.debug('Completing tutorial steps for %s.', account['username'])
-        complete_tutorial(api, account)
-    else:
-        log.debug('Account %s already did the tutorials.', account['username'])
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
