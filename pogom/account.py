@@ -100,8 +100,7 @@ def check_login(args, account, api, position, proxy_url):
 
     time.sleep(random.uniform(2, 4))
 
-    # 1 - Try to make an empty request.
-    try:
+    try:  # 1 - Make an empty request to mimick real app behavior.
         request = api.create_request()
         request.call()
         time.sleep(random.uniform(.43, .97))
@@ -124,8 +123,7 @@ def check_login(args, account, api, position, proxy_url):
                       ' Exception in get_player: %s', account['username'],
                       repr(e))
 
-    # 3 - Download Remote Config Version request.
-    try:
+    try:  # 3 - Download Remote Config Version request.
         request = api.create_request()
         request.download_remote_config_version(platform=1,
                                                device_manufacturer='Apple',
@@ -138,8 +136,7 @@ def check_login(args, account, api, position, proxy_url):
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
 
-    # 4 - Get Asset Digest request.
-    try:
+    try:  # 4 - Get Asset Digest request.
         request = api.create_request()
         request.get_asset_digest(platform=1, device_manufacturer='Apple',
                                  device_model='iPhone', locale=args.locale,
@@ -150,13 +147,19 @@ def check_login(args, account, api, position, proxy_url):
     except Exception as e:
         log.exception('Error while downloading Asset Digest: %s.', repr(e))
 
-    # 5 - Download Item Templates request.
-    try:
+    try:  # 5 - Download Item Templates request.
         api.download_item_templates()
     except Exception as e:
         log.exception('Downloading Item Templates failed: %s', repr(e))
+        
+    # Check tutorial completion.
+    if not all(x in account['tutorials'] for x in (0, 1, 3, 4, 7)):
+        log.debug('Completing tutorial steps for %s.', account['username'])
+        complete_tutorial(api, account)
+    else:
+        log.debug('Account %s already did the tutorials.', account['username'])
 
-    try:  # 6 - get_player_profile
+    try:  # 6 - Get Player Profile request.
         request = api.create_request()
         request.get_player_profile()
         request.check_challenge()
@@ -171,7 +174,7 @@ def check_login(args, account, api, position, proxy_url):
         log.exception('Login for account %s failed. Exception in ' +
                       'get_player_profile: %s', account['username'], repr(e))
 
-    try:  # 7 - level_up_rewards
+    try:  # 7 - Check if there are level up rewards to claim.
         request = api.create_request()
         request.level_up_rewards()
         request.check_challenge()
