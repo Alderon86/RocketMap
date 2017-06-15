@@ -75,6 +75,10 @@ def get_args():
                         default=7200,
                         help=('Seconds for accounts to rest when they fail ' +
                               'or are switched out.'))
+    parser.add_argument('-adba', '--add-db-accounts',
+                        help=('Writes accounts and high lvl accounts from a ' +
+                              'given csv file to the DB'),
+                        action='store_true', default=False)
     parser.add_argument('-ac', '--accountcsv',
                         help=('Load accounts from CSV file containing ' +
                               '"auth_service,username,passwd" lines.'))
@@ -668,7 +672,7 @@ def get_args():
                         'auth_service': service,
                         'username': username,
                         'password': password,
-                        'level': 30,  # you should be sure about it.
+                        'level': 30,  # lvl 30+, you should be sure about that.
                         'captcha': False,
                         'shadowban': False
                     }

@@ -4,14 +4,12 @@
 import logging
 import time
 import random
-from threading import Lock
-from timeit import default_timer
 
 from pgoapi import PGoApi
 from pgoapi.exceptions import AuthException
 
 from .fakePogoApi import FakePogoApi
-from .utils import in_radius, generate_device_info, equi_rect_distance
+from .utils import in_radius, generate_device_info
 from .proxy import get_new_proxy
 
 log = logging.getLogger(__name__)

@@ -362,7 +362,7 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
     to prevent accounts from being cycled through too quickly.
     '''
     while account_queue.empty():
-        args.accounts = list(Account.get_accounts(args.workers))
+        args.accounts = list(Account.get_accounts(args.workers, init=True))
         for a in args.accounts:
             account_queue.put(a)
 
@@ -373,6 +373,8 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
         if account_queue.empty():
             log.error('Failed to get accounts. Retrying in 5 s...')
             time.sleep(5)
+
+    log.info('Loaded {} accounts from the DB.'.format(account_queue.qsize()))
 
     # Create a list for failed accounts.
     account_failures = []
@@ -406,9 +408,9 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
         t = Thread(target=status_printer,
                    name='status_printer',
                    args=(threadStatus, search_items_queue_array,
-                         db_updates_queue, wh_queue, account_failures,
-                         account_captchas, args.print_status, args.hash_key,
-                         key_scheduler))
+                         db_updates_queue, wh_queue, account_queue,
+                         account_failures, account_captchas, args.print_status,
+                         args.hash_key, key_scheduler))
         t.daemon = True
         t.start()
 

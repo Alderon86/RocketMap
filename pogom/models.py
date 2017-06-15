@@ -134,16 +134,33 @@ class Account(BaseModel):
     # Gets requested accounts from DB, sorted by lowest level and
     # oldest last_modified. Mark fetched accounts with in_use and instance_name
     @staticmethod
-    def get_accounts(number, min_level=1, max_level=40):
-        query = (Account
-                 .select()
-                 .where((Account.in_use == 0) &
-                        (Account.shadowban == 0) &
-                        (Account.level >= min_level) &
-                        (Account.level <= max_level))
-                 .order_by(Account.level.asc(), Account.last_modified.asc())
-                 .limit(number)
-                 .dicts())
+    def get_accounts(number, min_level=1, max_level=40, init=False):
+        query = []
+
+        # Try to re-use previous accounts for this instance
+        if init:
+            query = (Account
+                     .select()
+                     .where((Account.instance_name == args.status_name) &
+                            (Account.shadowban == 0) &
+                            (Account.level >= min_level) &
+                            (Account.level <= max_level))
+                     .order_by(Account.level.asc(),
+                               Account.last_modified.asc())
+                     .limit(number)
+                     .dicts())
+
+        if not query:
+            query = (Account
+                     .select()
+                     .where((Account.in_use == 0) &
+                            (Account.shadowban == 0) &
+                            (Account.level >= min_level) &
+                            (Account.level <= max_level))
+                     .order_by(Account.level.asc(),
+                               Account.last_modified.asc())
+                     .limit(number)
+                     .dicts())
 
         # Directly set accounts to in_use with the instance_name
         usernames = [dba['username'] for dba in query]
@@ -155,6 +172,12 @@ class Account(BaseModel):
         for a in query:
             accounts.append(a)
 
+        # Sets free all instance-flagged accounts which are not in use anymore
+        (Account.update(in_use=False, instance_name=None)
+                .where((Account.instance_name == args.status_name) &
+                       ~(Account.username << usernames))
+                .execute())
+
         log.debug('Got {} accounts.'.format(len(accounts)))
         return accounts
 
@@ -164,46 +187,33 @@ class Account(BaseModel):
         query = Account.select().where((Account.captcha == 1)).dicts()
         return list(query.values())
 
-    # Resets all instance-flagged accounts to set them free for re-use
-    @staticmethod
-    def reset_instance():
-        return (Account.update(in_use=False, instance_name=None)
-                       .where(Account.instance_name == args.status_name)
-                       .execute())
-
     # Compares newly specified accounts from csv with existing DB accounts
     @staticmethod
     def find_new(accounts):
-        usernames = [a['username'] for a in accounts]
-
-        query = (Account
-                 .select(Account.username)
-                 .where(Account.username << usernames)
-                 .dicts())
-
-        db_usernames = [dbu['username'] for dbu in query]
-
-        # Performance:  disable the garbage collector prior to creating a
-        # (potentially) large dict with append().
-        gc.disable()
-
         new_accounts = []
-        for ca in accounts:
-            if ca['username'] in db_usernames:  # Not new. Next one.
-                continue
 
-            new_accounts.append(ca)
+        if accounts:
+            usernames = [a['username'] for a in accounts]
 
-        # Re-enable the GC.
-        gc.enable()
-        log.debug('Found {} new accounts.'.format(len(new_accounts)))
+            query = (Account
+                     .select(Account.username)
+                     .where(Account.username << usernames)
+                     .dicts())
+
+            db_usernames = [dbu['username'] for dbu in query]
+
+            for ca in accounts:
+                if ca['username'] in db_usernames:  # Not new. Next one.
+                    continue
+
+                new_accounts.append(ca)
+            log.debug('Found {} new accounts.'.format(len(new_accounts)))
 
         return new_accounts
 
     # Updates the DB account after an action to show it's still in use
     @staticmethod
     def heartbeat(account):
-        print "Heartbeat {} at {}".format(account['username'],datetime.utcnow())
         (Account(username=account['username'],
                  in_use=True,
                  instance_name=args.status_name,
@@ -2732,7 +2742,7 @@ def clean_db_loop(args):
                      .update(in_use=False, instance_name=None)
                      .where((Account.in_use == 1) &
                             (Account.last_modified <
-                             (datetime.utcnow() - timedelta(minutes=60))))
+                             (datetime.utcnow() - timedelta(minutes=15))))
                      .execute())
 
             query = (MainWorker
