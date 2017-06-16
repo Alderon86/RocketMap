@@ -108,13 +108,18 @@ def check_login(args, account, api, position, proxy_url):
                       repr(e))
 
     try:  # 2 - Get Player request.
-        request = api.create_request()
-        request.get_player(
+        req = api.create_request()
+        req.get_player(
             player_locale={
                 'country': 'US',
                 'language': 'en',
-                'timezone': 'America/Denver'})
-        request.call()
+                'timezone': 'America/Los_Angeles'})
+        req.check_challenge()
+        req.get_hatched_eggs()
+        req.get_inventory()
+        req.check_awarded_badges()
+        req.get_buddy_walked()
+        req.call()
         time.sleep(random.uniform(.53, 1.1))
         if request.call()['responses']['GET_PLAYER'].get('warn', False):
             account['warn'] = True
@@ -122,38 +127,53 @@ def check_login(args, account, api, position, proxy_url):
             account['banned'] = True
 
     except Exception as e:
-        log.exception('Login for account %s failed.' +
-                      ' Exception in get_player: %s', account['username'],
-                      repr(e))
+        log.error('Exception getting player information: %s', repr(e))
 
     try:  # 3 - Download Remote Config Version request.
         request = api.create_request()
         request.download_remote_config_version(platform=1,
-                                               device_manufacturer='Apple',
-                                               device_model='iPhone',
-                                               locale=args.locale,
                                                app_version=int(
                                                 args.api_version.replace(
                                                     '.', '0')))
+        req.check_challenge()
+        req.get_hatched_eggs()
+        req.get_inventory(last_timestamp_ms=0)
+        req.check_awarded_badges()
+        req.download_settings()
         request.call()
+        time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
 
     try:  # 4 - Get Asset Digest request.
-        request = api.create_request()
-        request.get_asset_digest(platform=1, device_manufacturer='Apple',
-                                 device_model='iPhone', locale=args.locale,
-                                 app_version=int(
-                                    args.api_version.replace('.', '0')))
-        request.call()
+        req = api.create_request()
+        req.get_asset_digest(
+            platform=1,
+            app_version=int(args.api_version.replace('.', '0')),
+            paginate=True)
+        req.check_challenge()
+        req.get_hatched_eggs()
+        req.get_inventory()
+        req.check_awarded_badges()
+        req.download_settings()
+        req.call()
         time.sleep(random.uniform(.53, 1.1))
+
     except Exception as e:
         log.exception('Error while downloading Asset Digest: %s.', repr(e))
 
-    try:  # 5 - Download Item Templates request.
-        api.download_item_templates()
+    try:  # 5 dwnload item templates
+        request = api.create_request()
+        request.download_item_templates(paginate=True)
+        request.check_challenge()
+        request.get_hatched_eggs()
+        request.get_inventory()
+        request.check_awarded_badges()
+        request.download_settings()
+        request.call()
+        time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
-        log.exception('Downloading Item Templates failed: %s', repr(e))
+        log.exception('Error while downloading Item Templates: %s.', repr(e))
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
@@ -166,6 +186,7 @@ def check_login(args, account, api, position, proxy_url):
         request.get_buddy_walked()
         request.call()
         time.sleep(random.uniform(.2, .3))
+
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'get_player_profile: %s', account['username'], repr(e))
@@ -181,11 +202,29 @@ def check_login(args, account, api, position, proxy_url):
         request.get_buddy_walked()
         request.call()
         time.sleep(random.uniform(.45, .7))
+
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
 
-    # TODO: # 8 Make a request to get Shop items.
+    try:  # 8 - Register Background Device.
+        request = api.create_request()
+        request.register_background_device(device_type='apple_watch')
+        request.check_challenge()
+        request.get_hatched_eggs()
+        request.get_inventory()
+        request.check_awarded_badges()
+        request.download_settings()
+        request.get_buddy_walked()
+        request.call()
+        time.sleep(random.uniform(.53, 1.1))
+    except Exception as e:
+        log.exception('Login for account %s failed. Exception in ' +
+                      'Background Device: %s', account['username'], repr(e))
+
+    # TODO: # 9 Make a request to get Shop items.
+    # Also we need to parse last_timestamp_ms for each Account with
+    # every get_inventory() request.
 
     log.debug('Login for account %s successful.', account['username'])
     time.sleep(random.uniform(10, 20))
