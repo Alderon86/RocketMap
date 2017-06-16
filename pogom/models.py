@@ -171,7 +171,6 @@ class Account(BaseModel):
 
         accounts = []
         for a in query:
-            a['empty_spawnpoint'] = 0   # Start account at 0, each run.
             accounts.append(a)
 
         # Sets free all instance-flagged accounts which are not in use anymore
@@ -220,7 +219,6 @@ class Account(BaseModel):
         (Account(username=account['username'],
                  in_use=True,
                  instance_name=args.status_name,
-                 empty_spawnpoint=account['empty_spawnpoint'],
                  last_modified=datetime.utcnow())
          .save())
 
@@ -2503,6 +2501,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
             if clock_between(endpoints[0], now_secs, endpoints[1]):
                 sp['missed_count'] += 1
                 spawn_points[sp['id']] = sp
+                status['empty_spawnpoint'] += 1
                 log.warning('%s kind spawnpoint %s has no Pokemon %d times'
                             ' in a row.',
                             sp['kind'], sp['id'], sp['missed_count'])
