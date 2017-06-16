@@ -117,7 +117,10 @@ class Account(BaseModel):
     in_use = BooleanField(index=True, default=False)
     instance_name = CharField(index=True, null=True, max_length=64)
     captcha = BooleanField(index=True)
+    fail = BooleanField(index=True)
     shadowban = BooleanField(index=True)
+    warn = BooleanField(index=True)
+    banned = BooleanField(index=True)
     last_modified = DateTimeField(null=True, index=True,
                                   default=datetime.utcnow)
 
@@ -142,7 +145,9 @@ class Account(BaseModel):
             query = (Account
                      .select()
                      .where((Account.instance_name == args.status_name) &
+                            (Account.fail == 0) &
                             (Account.shadowban == 0) &
+                            (Account.banned == 0) &
                             (Account.level >= min_level) &
                             (Account.level <= max_level))
                      .order_by(Account.level.asc(),
@@ -154,7 +159,9 @@ class Account(BaseModel):
             query = (Account
                      .select()
                      .where((Account.in_use == 0) &
+                            (Account.fail == 0) &
                             (Account.shadowban == 0) &
+                            (Account.banned == 0) &
                             (Account.level >= min_level) &
                             (Account.level <= max_level))
                      .order_by(Account.level.asc(),
@@ -243,11 +250,37 @@ class Account(BaseModel):
                  captcha=captcha)
          .save())
 
+    # Sets the fail flag of an account when getting removed from queue for
+    # uncertain reason. Re-use is possible.
+    @staticmethod
+    def set_fail(account):
+        (Account(username=account['username'],
+                 in_use=False,
+                 fail=True)
+         .save())
+
     # Sets the shadowban flag of an account
     @staticmethod
     def set_shadowban(account):
         (Account(username=account['username'],
+                 in_use=False,
                  shadowban=True)
+         .save())
+
+    # Sets the warn flag of an account. Usage still possible in the future.
+    @staticmethod
+    def set_warn(account):
+        (Account(username=account['username'],
+                 warn=True)
+         .save())
+
+    # Sets the ban flag of an account. Re-use impossible.
+    @staticmethod
+    def set_banned(account):
+        (Account(username=account['username'],
+                 in_use=False,
+                 instance_name=None,
+                 banned=True)
          .save())
 
 
@@ -2751,12 +2784,31 @@ def db_updater(args, q, db):
 def clean_db_loop(args):
     while True:
         try:
-            # Some quite inactive Accounts in the DB? Reset them.
+            # Some quite inactive Accounts in use? Reset them.
+            # Caused by hard shut-down or to many workers for instances.
             query = (Account
                      .update(in_use=False, instance_name=None)
                      .where((Account.in_use == 1) &
                             (Account.last_modified <
                              (datetime.utcnow() - timedelta(minutes=15))))
+                     .execute())
+
+            # Resets failed accounts after rest time for re-use.
+            # Fail flag remains until next successful scan
+            query = (Account
+                     .update(instance_name=None,fail=False)
+                     .where((Account.fail == 1) &
+                            (Account.last_modified <
+                             (datetime.utcnow() - timedelta(
+                                seconds=args.account_rest_interval))))
+                     .execute())
+
+            # Resets shadowbans after one week.
+            query = (Account
+                     .update(shadowban=False)
+                     .where((Account.shadowban == 1) &
+                            (Account.last_modified <
+                             (datetime.utcnow() - timedelta(weeks=1))))
                      .execute())
 
             query = (MainWorker

@@ -834,6 +834,7 @@ def search_worker_thread(args, account_queue,
                     account_failures.append({'account': account,
                                              'last_fail_time': now(),
                                              'reason': 'failures'})
+                    Account.set_fail(account)
                     account_queue.put(Account.get_accounts(1)[-1])
                     # Exit this loop to get a new account and have the API
                     # recreated.
@@ -852,6 +853,7 @@ def search_worker_thread(args, account_queue,
                     account_failures.append({'account': account,
                                              'last_fail_time': now(),
                                              'reason': 'empty scans'})
+                    Account.set_fail(account)
                     account_queue.put(Account.get_accounts(1)[-1])
                     # Exit this loop to get a new account and have the API
                     # recreated.
@@ -869,6 +871,7 @@ def search_worker_thread(args, account_queue,
                     account_failures.append({'account': account,
                                              'last_fail_time': now(),
                                              'reason': 'shadowbanned'})
+                    Account.set_fail(account)
                     account_queue.put(Account.get_accounts(1)[-1])
                     # Exit this loop to get a new account and have the API
                     # recreated.
@@ -961,6 +964,15 @@ def search_worker_thread(args, account_queue,
                 status['message'] = 'Logging in...'
                 check_login(args, account, api, step_location,
                             status['proxy_url'])
+                if account['warn']:
+                    Account.set_warn(account)
+                    log.warning('Account {} carries warn flag and is ' +
+                                'possibly shadowbanned - check during scans.')
+                if account['banned']:
+                    Account.set_banned(account)
+                    log.warning('Account {} is for sure banned and will be ' +
+                                'no longer be fetched from DB.')
+                    raise Exception
 
                 # Only run this when it's the account's first login, after
                 # check_login().
@@ -1225,6 +1237,7 @@ def search_worker_thread(args, account_queue,
             account_failures.append({'account': account,
                                      'last_fail_time': now(),
                                      'reason': 'exception'})
+            Account.set_fail(account)
             account_queue.put(Account.get_accounts(1)[-1])
             time.sleep(args.scan_delay)
 
