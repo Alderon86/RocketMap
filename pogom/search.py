@@ -857,6 +857,23 @@ def search_worker_thread(args, account_queue,
                     # recreated.
                     break
 
+                # If this account has been found too many empty spawnpoints,
+                # let it rest.
+                if (status['empty_spawnpoint'] > 5 and
+                    status['empty_spawnpoint'] > status['success']):
+                    status['message'] = (
+                        'Account {} scanned too much empty spawnpoints; ' +
+                        'possibly shadowbanned account. ' +
+                        'Switching accounts...').format(account['username'])
+                    log.warning(status['message'])
+                    account_failures.append({'account': account,
+                                             'last_fail_time': now(),
+                                             'reason': 'shadowbanned'})
+                    account_queue.put(Account.get_accounts(1)[-1])
+                    # Exit this loop to get a new account and have the API
+                    # recreated.
+                    break
+
                 # If used proxy disappears from "live list" after background
                 # checking - switch account but do not freeze it (it's not an
                 # account failure).
