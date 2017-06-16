@@ -164,12 +164,14 @@ class Account(BaseModel):
 
         # Directly set accounts to in_use with the instance_name
         usernames = [dba['username'] for dba in query]
-        (Account.update(in_use=True, instance_name=args.status_name)
+        (Account.update(in_use=True,
+                        instance_name=args.status_name)
                 .where((Account.username << usernames))
                 .execute())
 
         accounts = []
         for a in query:
+            a['empty_spawnpoint'] = 0   # Start account at 0, each run.
             accounts.append(a)
 
         # Sets free all instance-flagged accounts which are not in use anymore
@@ -218,6 +220,7 @@ class Account(BaseModel):
         (Account(username=account['username'],
                  in_use=True,
                  instance_name=args.status_name,
+                 empty_spawnpoint=account['empty_spawnpoint'],
                  last_modified=datetime.utcnow())
          .save())
 
@@ -1315,6 +1318,7 @@ class WorkerStatus(BaseModel):
     no_items = IntegerField()
     skip = IntegerField()
     captcha = IntegerField()
+    empty_spawnpoint = IntegerField()
     last_modified = DateTimeField(index=True)
     message = Utf8mb4CharField(max_length=191)
     last_scan_date = DateTimeField(index=True)
@@ -1331,6 +1335,7 @@ class WorkerStatus(BaseModel):
                 'no_items': status['noitems'],
                 'skip': status['skip'],
                 'captcha': status['captcha'],
+                'empty_spawnpoint': status['empty_spawnpoint'],
                 'last_modified': datetime.utcnow(),
                 'message': status['message'],
                 'last_scan_date': status.get('last_scan_date',
