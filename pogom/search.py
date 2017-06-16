@@ -189,14 +189,15 @@ def status_printer(threadStatus, search_items_queue_array, db_updates_queue,
                             str(threadStatus[item]['proxy_display'])))
 
             # How pretty.
-            status = '{:10} | {:5} | {:' + str(userlen) + '} | {:' + str(
-                proxylen) + '} | {:7} | {:6} | {:5} | {:7} | {:8} | {:10}'
+            status = ('{:10} | {:5} | {:' + str(userlen) + '} | {:' + str(
+                proxylen) + '} | {:7} | {:6} | {:5} | {:7} | {:8} | {:6} | ' +
+                '{:10}')
 
             # Print the worker status.
             status_text.append(status.format('Worker ID', 'Start', 'User',
                                              'Proxy', 'Success', 'Failed',
                                              'Empty', 'Skipped', 'Captchas',
-                                             'Message'))
+                                             'Empty Spawnpoints', 'Message'))
             for item in sorted(threadStatus):
                 if(threadStatus[item]['type'] == 'Worker'):
                     current_line += 1
@@ -219,6 +220,7 @@ def status_printer(threadStatus, search_items_queue_array, db_updates_queue,
                         threadStatus[item]['noitems'],
                         threadStatus[item]['skip'],
                         threadStatus[item]['captcha'],
+                        threadStatus[item]['empty_spawnpoint'],
                         threadStatus[item]['message']))
 
         elif display_type[0] == 'failedaccounts':
@@ -467,6 +469,7 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
             'noitems': 0,
             'skip': 0,
             'captcha': 0,
+            'empty_spawnpoint': 0,
             'username': '',
             'proxy_display': proxy_display,
             'proxy_url': proxy_url,
@@ -795,6 +798,7 @@ def search_worker_thread(args, account_queue,
             status['noitems'] = 0
             status['skip'] = 0
             status['captcha'] = 0
+            status['empty_spawnpoint'] = 0
             status['nonrares'] = 0
 
             Account.heartbeat(account)
