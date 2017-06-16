@@ -79,6 +79,10 @@ def get_args():
                         help=('Writes accounts and high lvl accounts from a ' +
                               'given csv file to the DB'),
                         action='store_true', default=False)
+    parser.add_argument('-cdba', '--clear-db-accounts',
+                        help=('Deletes the existing accounts in the ' +
+                        'database before starting the Scanners.'),
+                        action='store_true', default=False)
     parser.add_argument('-ac', '--accountcsv',
                         help=('Load accounts from CSV file containing ' +
                               '"auth_service,username,passwd" lines.'))
@@ -264,10 +268,6 @@ def get_args():
     parser.add_argument('-cd', '--clear-db',
                         help=('Deletes the existing database before ' +
                               'starting the Webserver.'),
-                        action='store_true', default=False)
-    parser.add_argument('-cda', '--clear_db_accounts',
-                        help=('Deletes the existing accounts in the ' +
-                              'database before starting the Scanners.'),
                         action='store_true', default=False)
     parser.add_argument('-np', '--no-pokemon',
                         help=('Disables Pokemon from the map (including ' +
@@ -641,7 +641,10 @@ def get_args():
                 'password': args.password[i],
                 'level': 1,  # Set possible default for initial functionality
                 'captcha': False,
-                'shadowban': False
+                'fail': False,
+                'shadowban': False,
+                'warn': False,
+                'banned': False,
             })
 
         # Prepare the L30 accounts for the account sets.

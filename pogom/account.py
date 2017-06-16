@@ -116,6 +116,11 @@ def check_login(args, account, api, position, proxy_url):
                 'timezone': 'America/Denver'})
         request.call()
         time.sleep(random.uniform(.53, 1.1))
+        if request.call()['responses']['GET_PLAYER'].get('warn', False):
+            account['warn'] = True
+        if request.call()['responses']['GET_PLAYER'].get('banned', False):
+            account['banned'] = True
+
     except Exception as e:
         log.exception('Login for account %s failed.' +
                       ' Exception in get_player: %s', account['username'],
