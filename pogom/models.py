@@ -2263,11 +2263,20 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                                                 + ' or higher, but account '
                                                 + hlvl_account['username']
                                                 + ' is only level '
-                                                + encounter_level + '.')
+                                                + str(encounter_level) + '.')
 
                         # Clear the response for memory management.
                         encounter_result = clear_dict_response(
                             encounter_result)
+
+                        # Check for shadowbanned high lvl account
+                        if (encounter_result[
+                                'responses']['ENCOUNTER'].get('result') == 7):
+                            Account.set_shadowban(hlvl_account)
+                            raise Exception('Encounter blocked by anti-cheat.'
+                                            + ' Account '
+                                            + hlvl_account['username']
+                                            + ' is shadowbanned.')
                 else:
                     log.error('No L30 accounts are available, please'
                               + ' consider adding more. Skipping encounter.')

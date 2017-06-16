@@ -860,7 +860,7 @@ def search_worker_thread(args, account_queue,
                 # If this account has been found too many empty spawnpoints,
                 # let it rest.
                 if (status['empty_spawnpoint'] > 5 and
-                    status['empty_spawnpoint'] > status['success']):
+                        status['empty_spawnpoint'] > status['success']):
                     status['message'] = (
                         'Account {} scanned too much empty spawnpoints; ' +
                         'possibly shadowbanned account. ' +
