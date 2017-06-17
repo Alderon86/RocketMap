@@ -786,6 +786,8 @@ def search_worker_thread(args, account_queue,
 
             # Get an account.
             account = account_queue.get()
+            # Reset account statistics tracked per loop.
+            reset_account(account)
             status.update(WorkerStatus.get_worker(
                 account['username'], scheduler.scan_location))
             status['message'] = 'Switching to account {}.'.format(
