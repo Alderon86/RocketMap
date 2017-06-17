@@ -279,43 +279,6 @@ def status_printer(threadStatus, search_items_queue_array, db_updates_queue,
         print '\n'.join(status_text)
 
 
-# The account recycler monitors failed accounts and places them back in the
-#  account queue 2 hours after they failed.
-# This allows accounts that were soft banned to be retried after giving
-# them a chance to cool down.
-def account_recycler(args, account_failures):
-    while True:
-        # Run once a minute.
-        time.sleep(60)
-        log.info('Account recycler running. Checking status of %d accounts.',
-                 len(account_failures))
-
-        # Create a new copy of the failure list to search through, so we can
-        # iterate through it without it changing.
-        failed_temp = list(account_failures)
-
-        # Search through the list for any item that last failed before
-        # -ari/--account-rest-interval seconds.
-        ok_time = now() - args.account_rest_interval
-        for a in failed_temp:
-            if a['last_fail_time'] <= ok_time:
-                # Remove the account from the real list, and add to the account
-                # queue.
-                log.info('Account {} returning to active duty.'.format(
-                    a['account']['username']))
-                account_failures.remove(a)
-                Account.set_free(a)
-            else:
-                if 'notified' not in a:
-                    log.info((
-                        'Account {} needs to cool off for {} minutes due ' +
-                        'to {}.').format(
-                            a['account']['username'],
-                            round((a['last_fail_time'] - ok_time) / 60, 0),
-                            a['reason']))
-                    a['notified'] = True
-
-
 def worker_status_db_thread(threads_status, name, db_updates_queue):
 
     while True:
@@ -415,13 +378,6 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
                          args.hash_key, key_scheduler))
         t.daemon = True
         t.start()
-
-    # Create account recycler thread.
-    log.info('Starting account recycler thread...')
-    t = Thread(target=account_recycler, name='account-recycler',
-               args=(args, account_failures))
-    t.daemon = True
-    t.start()
 
     # Create captcha overseer thread.
     if args.captcha_solving:
@@ -834,7 +790,11 @@ def search_worker_thread(args, account_queue,
                     account_failures.append({'account': account,
                                              'last_fail_time': now(),
                                              'reason': 'failures'})
-                    Account.set_fail(account)
+                    if not parsed:  # No GMO, possibly banned.
+                        Account.set_banned(account)
+                    else:
+                        Account.set_fail(account)
+
                     acc = Account.get_accounts(1)
                     if acc:
                         account_queue.put(acc.pop())
@@ -1112,7 +1072,7 @@ def search_worker_thread(args, account_queue,
                                          'banned.').format(step_location[0],
                                                            step_location[1],
                                                            account['username'])
-                    log.exception('{}. Exception message: {}'.format(
+                    log.exception('Exception message: {}'.format(
                         status['message'], repr(e)))
                     if response_dict is not None:
                         del response_dict
