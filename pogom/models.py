@@ -2787,7 +2787,7 @@ def clean_db_loop(args):
     while True:
         try:
             # Some quite inactive Accounts in use? Reset them.
-            # Caused by hard shut-down or to many workers for instances.
+            # Caused by hard shut-down or more workers than needed.
             query = (Account
                      .update(in_use=False, instance_name=None)
                      .where((Account.in_use == 1) &
@@ -2798,7 +2798,7 @@ def clean_db_loop(args):
             # Resets failed accounts after rest time for re-use.
             # Fail flag remains until next successful scan
             query = (Account
-                     .update(instance_name=None,fail=False)
+                     .update(instance_name=None, fail=False)
                      .where((Account.fail == 1) &
                             (Account.last_modified <
                              (datetime.utcnow() - timedelta(

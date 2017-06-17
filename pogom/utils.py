@@ -81,7 +81,7 @@ def get_args():
                         action='store_true', default=False)
     parser.add_argument('-cdba', '--clear-db-accounts',
                         help=('Deletes the existing accounts in the ' +
-                        'database before starting the Scanners.'),
+                              'database before starting the Scanners.'),
                         action='store_true', default=False)
     parser.add_argument('-ac', '--accountcsv',
                         help=('Load accounts from CSV file containing ' +
