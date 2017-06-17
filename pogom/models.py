@@ -156,7 +156,7 @@ class Account(BaseModel):
                      .limit(number)
                      .dicts())
 
-        if not len(query):
+        if len(query) != number:  # Not exact same config? Get new accounts!
             query = (Account
                      .select()
                      .where((Account.in_use == 0) &
