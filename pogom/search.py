@@ -47,7 +47,7 @@ from .models import (parse_map, GymDetails, parse_gyms, Account, MainWorker,
                      WorkerStatus, HashKeys, Shadowbanned)
 from .utils import now, clear_dict_response
 from .transform import get_new_coords, jitter_location
-from .account import (setup_api, check_login, get_tutorial_state,
+from .account import (setup_api, check_login,
                       complete_tutorial)
 from .captcha import captcha_overseer_thread, handle_captcha
 from .proxy import get_new_proxy
@@ -835,7 +835,10 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': now(),
                                              'reason': 'failures'})
                     Account.set_fail(account)
-                    account_queue.put(Account.get_accounts(1)[-1])
+                    acc = Account.get_accounts(1)
+                    if acc:
+                        account_queue.put(acc.pop())
+
                     # Exit this loop to get a new account and have the API
                     # recreated.
                     break
@@ -854,14 +857,17 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': now(),
                                              'reason': 'empty scans'})
                     Account.set_fail(account)
-                    account_queue.put(Account.get_accounts(1)[-1])
+                    acc = Account.get_accounts(1)
+                    if acc:
+                        account_queue.put(acc.pop())
+
                     # Exit this loop to get a new account and have the API
                     # recreated.
                     break
 
                 # If this account has been found too many empty spawnpoints,
                 # let it rest.
-                if (status['empty_spawnpoint'] > 5 and
+                if (status['empty_spawnpoint'] > 20 and
                         status['empty_spawnpoint'] > status['success']):
                     status['message'] = (
                         'Account {} scanned too much empty spawnpoints; ' +
@@ -872,7 +878,10 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': now(),
                                              'reason': 'shadowban'})
                     Account.set_fail(account)
-                    account_queue.put(Account.get_accounts(1)[-1])
+                    acc = Account.get_accounts(1)
+                    if acc:
+                        account_queue.put(acc.pop())
+
                     # Exit this loop to get a new account and have the API
                     # recreated.
                     break
@@ -903,7 +912,10 @@ def search_worker_thread(args, account_queue,
                         account_failures.append({'account': account,
                                                  'last_fail_time': now(),
                                                  'reason': 'rest interval'})
-                        account_queue.put(Account.get_accounts(1)[-1])
+                        acc = Account.get_accounts(1)
+                        if acc:
+                            account_queue.put(acc.pop())
+
                         break
 
                 # Grab the next thing to search (when available).
@@ -981,7 +993,7 @@ def search_worker_thread(args, account_queue,
 
                     # Check tutorial completion.
                     if args.complete_tutorial:
-                        tutorial_state = get_tutorial_state(api, account)
+                        tutorial_state = account['tutorial_state']
 
                         if not all(x in tutorial_state
                                    for x in (0, 1, 3, 4, 7)):
@@ -1000,6 +1012,7 @@ def search_worker_thread(args, account_queue,
                 # Make the actual request.
                 scan_date = datetime.utcnow()
                 response_dict = map_request(api, step_location, args.no_jitter)
+                status['last_scan_date'] = datetime.utcnow()
 
                 # Record the time and the place that the worker made the
                 # request.
@@ -1025,7 +1038,10 @@ def search_worker_thread(args, account_queue,
                                              response_dict, step_location)
                     if captcha is not None:
                         account_queue.task_done()
-                        account_queue.put(Account.get_accounts(1)[-1])
+                        acc = Account.get_accounts(1)
+                        if acc:
+                            account_queue.put(acc.pop())
+
                         time.sleep(3)
                         break
 
@@ -1077,7 +1093,10 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': sb_time,
                                              'reason': 'shadowban'})
                     Account.set_shadowban(account)
-                    account_queue.put(Account.get_accounts(1)[-1])
+                    acc = Account.get_accounts(1)
+                    if acc:
+                        account_queue.put(acc.pop())
+
                     # Exit this loop to get a new account and have the API
                     # recreated.
                     break
@@ -1227,7 +1246,7 @@ def search_worker_thread(args, account_queue,
         # Catch any process exceptions, log them, and continue the thread.
         except Exception as e:
             log.error((
-                'Exception in search_worker under account {} Exception ' +
+                'Exception in search_worker under account {}. Exception ' +
                 'message: {}.').format(account['username'], repr(e)))
             status['message'] = (
                 'Exception in search_worker using account {}. Restarting ' +
@@ -1238,7 +1257,10 @@ def search_worker_thread(args, account_queue,
                                      'last_fail_time': now(),
                                      'reason': 'exception'})
             Account.set_fail(account)
-            account_queue.put(Account.get_accounts(1)[-1])
+            acc = Account.get_accounts(1)
+            if acc:
+                account_queue.put(acc.pop())
+
             time.sleep(args.scan_delay)
 
 

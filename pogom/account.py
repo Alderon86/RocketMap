@@ -114,11 +114,12 @@ def check_login(args, account, api, position, proxy_url):
                 'country': 'US',
                 'language': 'en',
                 'timezone': 'America/Denver'})
-        request.call()
+        response = request.call()
         time.sleep(random.uniform(.53, 1.1))
-        if request.call()['responses']['GET_PLAYER'].get('warn', False):
+        account['tutorial_state'] = get_tutorial_state(response)
+        if response['responses']['GET_PLAYER'].get('warn', False):
             account['warn'] = True
-        if request.call()['responses']['GET_PLAYER'].get('banned', False):
+        if response['responses']['GET_PLAYER'].get('banned', False):
             account['banned'] = True
 
     except Exception as e:
@@ -193,20 +194,11 @@ def check_login(args, account, api, position, proxy_url):
 
 # Check if all important tutorial steps have been completed.
 # API argument needs to be a logged in API instance.
-def get_tutorial_state(api, account):
-    log.debug('Checking tutorial state for %s.', account['username'])
-    request = api.create_request()
-    request.get_player(
-        player_locale={'country': 'US',
-                       'language': 'en',
-                       'timezone': 'America/Denver'})
-
-    response = request.call().get('responses', {})
-
-    get_player = response.get('GET_PLAYER', {})
+def get_tutorial_state(response):
+    responses = response.get('responses', {})
+    get_player = responses.get('GET_PLAYER', {})
     tutorial_state = get_player.get(
         'player_data', {}).get('tutorial_state', [])
-    time.sleep(random.uniform(2, 4))
     return tutorial_state
 
 
