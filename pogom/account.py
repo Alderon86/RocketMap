@@ -109,79 +109,130 @@ def check_login(args, account, api, position, proxy_url):
                       ' Exception in call request: %s', account['username'],
                       repr(e))
 
-    try:  # 2 - Get Player request.
+    try:  # 2 Get_Palyer request.
         req = api.create_request()
         req.get_player(
             player_locale={
                 'country': 'US',
                 'language': 'en',
-                'timezone': 'America/Los_Angeles'})
-        req.check_challenge()
-        req.get_hatched_eggs()
-        req.get_inventory()
-        req.check_awarded_badges()
-        req.get_buddy_walked()
+                'timezone': 'America/Denver'})
         req.call()
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.error('Exception getting player information: %s', repr(e))
 
     try:  # 3 - Download Remote Config Version request.
+        old_config = account['remote_config']
         request = api.create_request()
         request.download_remote_config_version(platform=1,
                                                app_version=int(
                                                 args.api_version.replace(
                                                     '.', '0')))
-        req.check_challenge()
-        req.get_hatched_eggs()
-        req.get_inventory(last_timestamp_ms=0)
-        req.check_awarded_badges()
-        req.download_settings()
-        request.call()
+        request.check_challenge()
+        request.get_hatched_eggs()
+        request.get_inventory(last_timestamp_ms=0)
+        request.check_awarded_badges()
+        request.download_settings()
+        response = request.call()
+        parse_download_settings(account, response)
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
 
-    try:  # 4 - Get Asset Digest request.
-        req = api.create_request()
-        req.get_asset_digest(
-            platform=1,
-            app_version=int(args.api_version.replace('.', '0')),
-            paginate=True)
-        req.check_challenge()
-        req.get_hatched_eggs()
-        req.get_inventory()
-        req.check_awarded_badges()
-        req.download_settings()
-        req.call()
-        time.sleep(random.uniform(.53, 1.1))
+    # 4 - Get Asset Digest request.
+    config = account['remote_config']
+    if config['asset_time'] > old_config.get('asset_time', 0):
+        req_count = 0
+        i = random.randint(0, 3)
+        result = 2
+        page_offset = 0
+        page_timestamp = 0
+        time.sleep(random.uniform(.7, 1.2))
+        while result == 2:
+            try:
+                request = api.create_request()
+                request.get_asset_digest(
+                    platform=1,
+                    app_version=int(args.api_version.replace('.', '0')),
+                    paginate=True,
+                    page_offset=page_offset,
+                    page_timestamp=page_timestamp)
+                request.check_challenge()
+                request.get_hatched_eggs()
+                request.get_inventory(last_timestamp_ms=account[
+                    'last_timestamp_ms'])
+                request.check_awarded_badges()
+                request.download_settings(hash=account[
+                    'remote_config']['hash'])
+                response = request.call()
+                req_count += 1
+                if i > 2:
+                    time.sleep(random.uniform(1.4, 1.6))
+                    i = 0
+                else:
+                    i += 1
+                    time.sleep(random.uniform(.3, .5))
+                    result = response['responses']['GET_ASSET_DIGEST']
+                    page_offset = result['page_offset']
+                    page_timestamp = result['timestamp_ms']
 
-    except Exception as e:
-        log.exception('Error while downloading Asset Digest: %s.', repr(e))
+                    time.sleep(random.uniform(.53, 1.1))
+                    log.debug('Completed %d requests to get asset digest.',
+                              req_count)
 
-    try:  # 5 dwnload item templates
-        request = api.create_request()
-        request.download_item_templates(paginate=True)
-        request.check_challenge()
-        request.get_hatched_eggs()
-        request.get_inventory()
-        request.check_awarded_badges()
-        request.download_settings()
-        request.call()
-        time.sleep(random.uniform(.53, 1.1))
-    except Exception as e:
-        log.exception('Error while downloading Item Templates: %s.', repr(e))
+            except Exception as e:
+                log.exception('Error while downloading Asset Digest: %s.',
+                              repr(e))
+
+    # 5 dwnload item templates
+    if config['template_time'] > old_config.get('template_time', 0):
+        req_count = 0
+        i = random.randint(0, 3)
+        result = 2
+        page_offset = 0
+        page_timestamp = 0
+        while result == 2:
+            try:
+                request = api.create_request()
+                request.download_item_templates(paginate=True,
+                                                page_offset=page_offset,
+                                                page_timestamp=page_timestamp)
+                request.check_challenge()
+                request.get_hatched_eggs()
+                request.get_inventory(last_timestamp_ms=account[
+                    'last_timestamp_ms'])
+                request.check_awarded_badges()
+                request.download_settings(hash=account[
+                    'remote_config']['hash'])
+                response = request.call()
+                req_count += 1
+                if i > 2:
+                    time.sleep(random.uniform(1.4, 1.6))
+                    i = 0
+                else:
+                    i += 1
+                    time.sleep(random.uniform(.3, .5))
+
+                    result = response['responses']['DOWNLOAD_ITEM_TEMPLATES']
+                    page_offset = result['page_offset']
+                    page_timestamp = result['timestamp_ms']
+                    log.debug('Completed %d requests to download' +
+                              ' item templates.', req_count)
+                    time.sleep(random.uniform(.53, 1.1))
+            except Exception as e:
+                log.exception('Error while downloading Item Templates: %s.',
+                              repr(e))
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
         request.get_player_profile()
         request.check_challenge()
         request.get_hatched_eggs()
-        request.get_inventory()
+        request.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         request.check_awarded_badges()
-        request.download_settings()
+        request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
-        request.call()
+        response = request.call()
         time.sleep(random.uniform(.2, .3))
 
     except Exception as e:
@@ -193,38 +244,37 @@ def check_login(args, account, api, position, proxy_url):
         request.level_up_rewards()
         request.check_challenge()
         request.get_hatched_eggs()
-        request.get_inventory()
+        request.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         request.check_awarded_badges()
-        request.download_settings()
+        request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
-        request.call()
+        response = request.call()
         time.sleep(random.uniform(.45, .7))
 
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
 
-    try:  # 8 - Register Background Device.
+    try:  # request 8: register_background_device
         request = api.create_request()
         request.register_background_device(device_type='apple_watch')
         request.check_challenge()
         request.get_hatched_eggs()
-        request.get_inventory()
+        request.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         request.check_awarded_badges()
-        request.download_settings()
+        request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
-        request.call()
+        response = request.call()
+
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'Background Device: %s', account['username'], repr(e))
 
     # TODO: # 9 Make a request to get Shop items.
-    # Also we need to parse last_timestamp_ms for each Account with
-    # every get_inventory() request.
 
-    log.debug('Login for account %s successful.', account['username'])
-    time.sleep(random.uniform(10, 20))
+        log.debug('Login for account %s successful.', account['username'])
+        time.sleep(random.uniform(10, 20))
 
 
 # Check if all important tutorial steps have been completed.
@@ -414,7 +464,6 @@ def spin_pokestop(api, fort, step_location):
     if in_radius((fort['latitude'], fort['longitude']), step_location,
                  spinning_radius):
         log.debug('Attempt to spin Pokestop (ID %s)', fort['id'])
-
         time.sleep(random.uniform(0.8, 1.8))  # Do not let Niantic throttle
         spin_response = spin_pokestop_request(api, fort, step_location)
         time.sleep(random.uniform(2, 4))  # Do not let Niantic throttle
@@ -491,6 +540,33 @@ def encounter_pokemon_request(api, encounter_id, spawnpoint_id, scan_location):
     except Exception as e:
         log.error('Exception while encountering Pokémon: %s.', repr(e))
         return False
+
+
+def reset_account(account):
+    account['remote_config'] = {}
+    account['last_timestamp_ms'] = int(time.time())
+
+
+def parse_download_settings(account, api_response):
+    if 'DOWNLOAD_REMOTE_CONFIG_VERSION' in api_response['responses']:
+        remote_config = (api_response['responses']
+                         .get('DOWNLOAD_REMOTE_CONFIG_VERSION', 0))
+        if 'asset_digest_timestamp_ms' in remote_config:
+            asset_time = remote_config['asset_digest_timestamp_ms'] / 1000000
+        if 'asset_digest_timestamp_ms' in remote_config:
+            template_time = remote_config['item_templates_timestamp_ms'] / 1000
+
+        download_settings = {}
+        download_settings['hash'] = api_response[
+            'responses']['DOWNLOAD_SETTINGS']['hash']
+        download_settings['asset_time'] = asset_time
+        download_settings['template_time'] = template_time
+
+        account['remote_config'] = download_settings
+
+        log.debug('Download settings for account %s: %s',
+                  account['username'], download_settings)
+        return True
 
 
 # The AccountSet returns a scheduler that cycles through different
