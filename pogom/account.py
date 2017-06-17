@@ -556,7 +556,7 @@ def parse_download_settings(account, api_response):
                          .get('DOWNLOAD_REMOTE_CONFIG_VERSION', 0))
         if 'asset_digest_timestamp_ms' in remote_config:
             asset_time = remote_config['asset_digest_timestamp_ms'] / 1000000
-        if 'asset_digest_timestamp_ms' in remote_config:
+        if 'item_templates_timestamp_ms' in remote_config:
             template_time = remote_config['item_templates_timestamp_ms'] / 1000
 
         download_settings = {}
