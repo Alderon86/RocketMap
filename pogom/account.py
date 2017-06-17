@@ -107,7 +107,7 @@ def check_login(args, account, api, position, proxy_url):
                       ' Exception in call request: %s', account['username'],
                       repr(e))
 
-    try:  # 2 Get_Palyer request.
+    try:  # 2 Get Player request.
         req = api.create_request()
         req.get_player(
             player_locale={
@@ -187,7 +187,7 @@ def check_login(args, account, api, position, proxy_url):
                 log.exception('Error while downloading Asset Digest: %s.',
                               repr(e))
 
-    # 5 dwnload item templates
+    # 5 Download Item Templates request.
     if config['template_time'] > old_config.get('template_time', 0):
         req_count = 0
         i = random.randint(0, 3)
@@ -258,7 +258,7 @@ def check_login(args, account, api, position, proxy_url):
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
 
-    try:  # request 8: register_background_device
+    try:  # 8 Register Background Device request.
         request = api.create_request()
         request.register_background_device(device_type='apple_watch')
         request.check_challenge()
