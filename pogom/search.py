@@ -364,16 +364,16 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
     to prevent accounts from being cycled through too quickly.
     '''
     while account_queue.empty():
-        args.accounts = list(Account.get_accounts(args.workers, init=True))
+        args.accounts = Account.get_accounts(args.workers, init=True)
         for a in args.accounts:
             account_queue.put(a)
 
         if account_queue.qsize() < args.workers:
-            log.warning('Found only {} of {} requested accounts'
+            log.warning('Found {} of {} requested accounts'
                         .format(account_queue.qsize(), args.workers))
 
         if account_queue.empty():
-            log.error('Failed to get accounts. Retrying in 5 s...')
+            log.error('Failed to get enough accounts. Retrying in 5 s...')
             time.sleep(5)
 
     log.info('Loaded {} accounts from the DB.'.format(account_queue.qsize()))
@@ -870,7 +870,7 @@ def search_worker_thread(args, account_queue,
                     log.warning(status['message'])
                     account_failures.append({'account': account,
                                              'last_fail_time': now(),
-                                             'reason': 'shadowbanned'})
+                                             'reason': 'shadowban'})
                     Account.set_fail(account)
                     account_queue.put(Account.get_accounts(1)[-1])
                     # Exit this loop to get a new account and have the API
@@ -1075,7 +1075,7 @@ def search_worker_thread(args, account_queue,
 
                     account_failures.append({'account': account,
                                              'last_fail_time': sb_time,
-                                             'reason': 'shadowbanned'})
+                                             'reason': 'shadowban'})
                     Account.set_shadowban(account)
                     account_queue.put(Account.get_accounts(1)[-1])
                     # Exit this loop to get a new account and have the API

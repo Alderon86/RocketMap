@@ -139,6 +139,7 @@ class Account(BaseModel):
     @staticmethod
     def get_accounts(number, min_level=1, max_level=40, init=False):
         query = []
+        accounts = []
 
         # Try to re-use previous accounts for this instance
         if init:
@@ -155,7 +156,7 @@ class Account(BaseModel):
                      .limit(number)
                      .dicts())
 
-        if not query:
+        if not len(query):
             query = (Account
                      .select()
                      .where((Account.in_use == 0) &
@@ -169,25 +170,26 @@ class Account(BaseModel):
                      .limit(number)
                      .dicts())
 
-        # Directly set accounts to in_use with the instance_name
-        usernames = [dba['username'] for dba in query]
-        (Account.update(in_use=True,
-                        instance_name=args.status_name)
-                .where((Account.username << usernames))
-                .execute())
-
-        accounts = []
-        for a in query:
-            accounts.append(a)
-
-        # Sets free all instance-flagged accounts which are not in use anymore
-        if init:
-            (Account.update(in_use=False, instance_name=None)
-                    .where((Account.instance_name == args.status_name) &
-                           ~(Account.username << usernames))
+        if len(query):
+            # Directly set accounts to in_use with the instance_name
+            usernames = [dba['username'] for dba in query]
+            (Account.update(in_use=True,
+                            instance_name=args.status_name)
+                    .where((Account.username << usernames))
                     .execute())
 
+            for a in query:
+                accounts.append(a)
+
+            # Sets free all instance-flagged accounts which are not in use
+            if init:
+                (Account.update(in_use=False, instance_name=None)
+                        .where((Account.instance_name == args.status_name) &
+                               ~(Account.username << usernames))
+                        .execute())
+
         log.debug('Got {} accounts.'.format(len(accounts)))
+
         return accounts
 
     # Fetches all captcha'd accounts for captcha handling (later)
@@ -2304,7 +2306,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
 
                         # Check for shadowbanned high lvl account
                         if (encounter_result[
-                                'responses']['ENCOUNTER'].get('result') == 7):
+                                'responses']['ENCOUNTER'].get('result') is 8):
                             Account.set_shadowban(hlvl_account)
                             raise Exception('Encounter blocked by anti-cheat.'
                                             + ' Account '

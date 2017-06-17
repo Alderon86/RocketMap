@@ -307,18 +307,18 @@ def main():
 
         if new_accounts:
             log.debug(
-                'Adding new accounts to DB: {}'.format(
+                'Adding new accounts to the DB: {}'.format(
                     [a['username'] for a in new_accounts]))
             Account.insert_accounts(new_accounts)
-            log.info('Added {} new accounts to DB.'.format(
+            log.info('Added {} new accounts to the DB.'.format(
                 len(new_accounts)))
 
         if new_high_lvl_accounts:
             log.debug(
-                'Adding new high level accounts to DB: {}'.format(
+                'Adding new high level accounts to the DB: {}'.format(
                      [a['username'] for a in new_high_lvl_accounts]))
             Account.insert_accounts(new_high_lvl_accounts)
-            log.info('Added {} new high level accounts to DB.'.format(
+            log.info('Added {} new high level accounts to the DB.'.format(
                 len(new_high_lvl_accounts)))
 
         log.info('Finished DB account process. ' +
