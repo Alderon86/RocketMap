@@ -1226,7 +1226,7 @@ def map_request(api, account, position, no_jitter=False):
         return False
 
 
-def gym_request(api, account, position, gym):
+def gym_request(api, account, position, gym, api_version):
     try:
         log.debug('Getting details for gym @ %f/%f (%fkm away)',
                   gym['latitude'], gym['longitude'],
@@ -1236,7 +1236,8 @@ def gym_request(api, account, position, gym):
                             player_latitude=f2i(position[0]),
                             player_longitude=f2i(position[1]),
                             gym_latitude=gym['latitude'],
-                            gym_longitude=gym['longitude'])
+                            gym_longitude=gym['longitude']
+                            client_version=api_version)
         req.check_challenge()
         req.get_hatched_eggs()
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
