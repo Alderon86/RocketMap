@@ -476,7 +476,7 @@ def spin_pokestop(api, account, fort, step_location):
         time.sleep(random.uniform(2, 4))  # Do not let Niantic throttle
 
         # Check for reCaptcha
-        captcha_url = spin_response['responses'][
+        captcha_url = response['responses'][
             'CHECK_CHALLENGE']['challenge_url']
         if len(captcha_url) > 1:
             log.debug('Account encountered a reCaptcha.')
