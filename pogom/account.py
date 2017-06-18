@@ -56,7 +56,8 @@ def setup_api(args, status, account):
 
 # Use API to check the login status, and retry the login if possible.
 def check_login(args, account, api, position, proxy_url):
-
+    account['remote_config'] = {}
+    app_version = int(args.api_version.replace('.', '0'))
     # Logged in? Enough time left? Cool!
     if api._auth_provider and api._auth_provider._ticket_expire:
         remaining_time = api._auth_provider._ticket_expire / 1000 - time.time()
@@ -126,9 +127,7 @@ def check_login(args, account, api, position, proxy_url):
         old_config = account['remote_config']
         request = api.create_request()
         request.download_remote_config_version(platform=1,
-                                               app_version=int(
-                                                args.api_version.replace(
-                                                    '.', '0')))
+                                               app_version=app_version)
         request.check_challenge()
         request.get_hatched_eggs()
         request.get_inventory(last_timestamp_ms=0)
@@ -136,6 +135,7 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings()
         response = request.call()
         parse_download_settings(account, response)
+        parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
@@ -154,7 +154,7 @@ def check_login(args, account, api, position, proxy_url):
                 request = api.create_request()
                 request.get_asset_digest(
                     platform=1,
-                    app_version=int(args.api_version.replace('.', '0')),
+                    app_version=app_version,
                     paginate=True,
                     page_offset=page_offset,
                     page_timestamp=page_timestamp)
@@ -466,13 +466,13 @@ def get_player_level(map_dict):
     return 0
 
 
-def spin_pokestop(api, fort, step_location):
+def spin_pokestop(api, account, fort, step_location):
     spinning_radius = 0.04
     if in_radius((fort['latitude'], fort['longitude']), step_location,
                  spinning_radius):
         log.debug('Attempt to spin Pokestop (ID %s)', fort['id'])
         time.sleep(random.uniform(0.8, 1.8))  # Do not let Niantic throttle
-        spin_response = spin_pokestop_request(api, fort, step_location)
+        response = spin_pokestop_request(api, account, fort, step_location)
         time.sleep(random.uniform(2, 4))  # Do not let Niantic throttle
 
         # Check for reCaptcha
@@ -482,7 +482,7 @@ def spin_pokestop(api, fort, step_location):
             log.debug('Account encountered a reCaptcha.')
             return False
 
-        spin_result = spin_response['responses']['FORT_SEARCH']['result']
+        spin_result = response['responses']['FORT_SEARCH']['result']
         if spin_result is 1:
             log.debug('Successful Pokestop spin.')
             return True
@@ -502,10 +502,10 @@ def spin_pokestop(api, fort, step_location):
     return False
 
 
-def spin_pokestop_request(api, account, fort, step_location, response):
+def spin_pokestop_request(api, account, fort, step_location):
     try:
         req = api.create_request()
-        spin_pokestop_response = req.fort_search(
+        response = req.fort_search(
             fort_id=fort['id'],
             fort_latitude=fort['latitude'],
             fort_longitude=fort['longitude'],
@@ -516,10 +516,10 @@ def spin_pokestop_request(api, account, fort, step_location, response):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        spin_pokestop_response = req.call()
+        response = req.call()
         parse_new_timestamp_ms(account, response)
 
-        return spin_pokestop_response
+        return response
 
     except Exception as e:
         log.error('Exception while spinning Pokestop: %s.', repr(e))

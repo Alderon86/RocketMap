@@ -48,8 +48,7 @@ from .models import (parse_map, GymDetails, parse_gyms, MainWorker,
 from .utils import now, clear_dict_response
 from .transform import get_new_coords, jitter_location
 from .account import (setup_api, check_login, get_tutorial_state,
-                      complete_tutorial, AccountSet, reset_account,
-                      parse_new_timestamp_ms)
+                      complete_tutorial, AccountSet, parse_new_timestamp_ms)
 from .captcha import captcha_overseer_thread, handle_captcha
 from .proxy import get_new_proxy
 
@@ -783,8 +782,6 @@ def search_worker_thread(args, account_queue, account_sets,
 
             # Get an account.
             account = account_queue.get()
-            # Reset account statistics tracked per loop.
-            reset_account(account)
             status.update(WorkerStatus.get_worker(
                 account['username'], scheduler.scan_location))
             status['message'] = 'Switching to account {}.'.format(
@@ -1084,8 +1081,8 @@ def search_worker_thread(args, account_queue, account_sets,
                                     current_gym, len(gyms_to_update),
                                     step_location[0], step_location[1])
                             time.sleep(random.random() + 2)
-                            response = gym_request(api,  step_location, gym,
-                                                   args.api_version)
+                            response = gym_request(api, account, step_location,
+                                                   gym, args.api_version)
 
                             # Make sure the gym was in range. (Sometimes the
                             # API gets cranky about gyms that are ALMOST 1km
@@ -1229,7 +1226,7 @@ def map_request(api, account, position, no_jitter=False):
         return False
 
 
-def gym_request(api, account, position, gym, api_version):
+def gym_request(api, account, position, gym):
     try:
         log.debug('Getting details for gym @ %f/%f (%fkm away)',
                   gym['latitude'], gym['longitude'],
