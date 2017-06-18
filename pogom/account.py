@@ -109,7 +109,7 @@ def check_login(args, account, api, position, proxy_url):
                       ' Exception in call request: %s', account['username'],
                       repr(e))
 
-    try:  # 2 Get Player request.
+    try:  # 2 - Get Player request.
         request = api.create_request()
         request.get_player(
             player_locale={
@@ -124,8 +124,9 @@ def check_login(args, account, api, position, proxy_url):
             account['banned'] = True
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
-        log.exception('Login for account %s failed. Exception in ' +
-                      'Get Player request: %s', account['username'], repr(e))
+        log.exception('Login for account %s failed.' +
+                      ' Exception in get_player: %s', account['username'],
+                      repr(e))
 
     try:  # 3 - Download Remote Config Version request.
         old_config = account['remote_config']
@@ -286,9 +287,17 @@ def check_login(args, account, api, position, proxy_url):
 
     # TODO: # 9 - Make a request to get Shop items.
 
-        log.debug('Login for account %s successful.', account['username'])
-        time.sleep(random.uniform(10, 20))
+    log.debug('Login for account %s successful.', account['username'])
+    time.sleep(random.uniform(10, 20))
 
+    try:  # 1 - Make an empty request to mimick real app behavior.
+        request = api.create_request()
+        request.call()
+        time.sleep(random.uniform(.43, .97))
+    except Exception as e:
+        log.exception('Login for account %s failed.' +
+                      ' Exception in call request: %s', account['username'],
+                      repr(e))
 
 # Check if all important tutorial steps have been completed.
 # API argument needs to be a logged in API instance.
