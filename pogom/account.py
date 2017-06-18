@@ -502,7 +502,7 @@ def spin_pokestop(api, fort, step_location):
     return False
 
 
-def spin_pokestop_request(api, fort, step_location):
+def spin_pokestop_request(api, account, fort, step_location, response):
     try:
         req = api.create_request()
         spin_pokestop_response = req.fort_search(
@@ -527,7 +527,8 @@ def spin_pokestop_request(api, fort, step_location):
         return False
 
 
-def encounter_pokemon_request(api, encounter_id, spawnpoint_id, scan_location):
+def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
+                              scan_location, response):
     try:
         # Setup encounter request envelope.
         req = api.create_request()

@@ -48,7 +48,8 @@ from .models import (parse_map, GymDetails, parse_gyms, MainWorker,
 from .utils import now, clear_dict_response
 from .transform import get_new_coords, jitter_location
 from .account import (setup_api, check_login, get_tutorial_state,
-                      complete_tutorial, AccountSet, reset_account, parse_new_timestamp_ms)
+                      complete_tutorial, AccountSet, reset_account,
+                      parse_new_timestamp_ms)
 from .captcha import captcha_overseer_thread, handle_captcha
 from .proxy import get_new_proxy
 
@@ -961,7 +962,8 @@ def search_worker_thread(args, account_queue, account_sets,
 
                 # Make the actual request.
                 scan_date = datetime.utcnow()
-                response_dict = map_request(api, account, step_location, args.no_jitter)
+                response_dict = map_request(api, account, step_location,
+                                            args.no_jitter)
                 status['last_scan_date'] = datetime.utcnow()
 
                 # Record the time and the place that the worker made the
@@ -990,7 +992,8 @@ def search_worker_thread(args, account_queue, account_sets,
                         # Make another request for the same location
                         # since the previous one was captcha'd.
                         scan_date = datetime.utcnow()
-                        response_dict = map_request(api, account, step_location,
+                        response_dict = map_request(api, account,
+                                                    step_location,
                                                     args.no_jitter)
                     elif captcha is not None:
                         account_queue.task_done()
