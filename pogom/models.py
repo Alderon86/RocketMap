@@ -140,9 +140,9 @@ class Account(BaseModel):
     def get_accounts(number, min_level=1, max_level=40, init=False):
         query = []
         accounts = []
-
         # Try to re-use previous accounts for this instance
         if init:
+            Account.reset_instance(keep_instance_name=True)
             query = (Account
                      .select()
                      .where((Account.instance_name == args.status_name) &
@@ -181,7 +181,7 @@ class Account(BaseModel):
             for a in query:
                 accounts.append(a)
 
-            # Sets free all instance-flagged accounts which are not in use
+            # Sets free all instance-flagged accounts which are not used now
             if init:
                 (Account.update(in_use=False, instance_name=None)
                         .where((Account.instance_name == args.status_name) &
@@ -230,6 +230,14 @@ class Account(BaseModel):
                  instance_name=args.status_name,
                  last_modified=datetime.utcnow())
          .save())
+
+    # Resets all instance-flagged accounts to set them free for re-use
+    @staticmethod
+    def reset_instance(keep_instance_name=False):
+        instance_name = args.status_name if keep_instance_name else None
+        (Account.update(in_use=False, instance_name=instance_name)
+                .where(Account.instance_name == args.status_name)
+                .execute())
 
     @staticmethod
     def set_level(account):
@@ -2226,7 +2234,9 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                     hlvl_api = api
                 else:
                     # Get one account to use for IV and CP scanning.
-                    hlvl_account = Account.get_accounts(1, min_level=30)[-1]
+                    acc = Account.get_accounts(1, min_level=30)
+                    if acc:
+                        hlvl_account = acc.pop()
 
                 # If we didn't get an account, we can't encounter.
                 if hlvl_account:
