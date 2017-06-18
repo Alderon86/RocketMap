@@ -170,6 +170,7 @@ def check_login(args, account, api, position, proxy_url):
                 request.download_settings(hash=account[
                     'remote_config']['hash'])
                 response = request.call()
+                parse_new_timestamp_ms(account, response)
                 req_count += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
@@ -210,6 +211,7 @@ def check_login(args, account, api, position, proxy_url):
                 request.download_settings(hash=account[
                     'remote_config']['hash'])
                 response = request.call()
+                parse_new_timestamp_ms(account, response)
                 req_count += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
@@ -225,8 +227,9 @@ def check_login(args, account, api, position, proxy_url):
                               ' item templates.', req_count)
                     time.sleep(random.uniform(.53, 1.1))
             except Exception as e:
-                log.exception('Error while downloading Item Templates: %s.',
-                              repr(e))
+                log.exception('Login for account %s failed. Exception in ' +
+                              'downloading Item Templates: %s.',
+                              account['username'], repr(e))
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
@@ -238,6 +241,7 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
+        parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.2, .3))
 
     except Exception as e:
@@ -254,6 +258,7 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
+        parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.45, .7))
 
     except Exception as e:
@@ -270,6 +275,7 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
+        parse_new_timestamp_ms(account, response)
 
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
@@ -491,7 +497,7 @@ def spin_pokestop(api, fort, step_location):
     return False
 
 
-def spin_pokestop_request(api, fort, step_location):
+def spin_pokestop_request(api, account, fort, step_location, response):
     try:
         req = api.create_request()
         spin_pokestop_response = req.fort_search(
@@ -502,10 +508,11 @@ def spin_pokestop_request(api, fort, step_location):
             player_longitude=step_location[1])
         req.check_challenge()
         req.get_hatched_eggs()
-        req.get_inventory()
+        req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
         spin_pokestop_response = req.call()
+        parse_new_timestamp_ms(account, response)
 
         return spin_pokestop_response
 
@@ -514,7 +521,8 @@ def spin_pokestop_request(api, fort, step_location):
         return False
 
 
-def encounter_pokemon_request(api, encounter_id, spawnpoint_id, scan_location):
+def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
+                              scan_location, response):
     try:
         # Setup encounter request envelope.
         req = api.create_request()
@@ -525,10 +533,11 @@ def encounter_pokemon_request(api, encounter_id, spawnpoint_id, scan_location):
             player_longitude=scan_location[1])
         req.check_challenge()
         req.get_hatched_eggs()
-        req.get_inventory()
+        req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
         encounter_result = req.call()
+        parse_new_timestamp_ms(account, response)
 
         return encounter_result
     except Exception as e:
@@ -561,3 +570,15 @@ def parse_download_settings(account, api_response):
         log.debug('Download settings for account %s: %s',
                   account['username'], download_settings)
         return True
+
+# Parse new timestamp from the GET_INVENTORY response.
+def parse_new_timestamp_ms(account, api_response):
+    if 'GET_INVENTORY' in api_response['responses']:
+        account['last_timestamp_ms'] = (api_response['responses']
+                                                    ['GET_INVENTORY']
+                                                    ['inventory_delta']
+                                        .get('new_timestamp_ms', 0))
+
+        player_level = get_player_level(api_response)
+        if player_level:
+            account['level'] = player_level
