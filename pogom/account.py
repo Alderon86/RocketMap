@@ -440,7 +440,7 @@ def tutorial_pokestop_spin(api, player_level, forts, step_location, account):
             account['username'])
         for fort in forts:
             if fort.get('type') == 1:
-                if spin_pokestop(api, fort, step_location):
+                if spin_pokestop(api, account, fort, step_location):
                     log.debug(
                         'Account %s successfully spun a Pokestop ' +
                         'after completed tutorial.',
@@ -548,11 +548,6 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
     except Exception as e:
         log.error('Exception while encountering Pokémon: %s.', repr(e))
         return False
-
-
-def reset_account(account):
-    account['remote_config'] = {}
-    account['last_timestamp_ms'] = int(time.time())
 
 
 def parse_download_settings(account, api_response):
