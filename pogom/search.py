@@ -790,10 +790,7 @@ def search_worker_thread(args, account_queue,
                     account_failures.append({'account': account,
                                              'last_fail_time': now(),
                                              'reason': 'failures'})
-                    if not parsed:  # No GMO, possibly banned.
-                        Account.set_banned(account)
-                    else:
-                        Account.set_fail(account)
+                    Account.set_fail(account)
 
                     acc = Account.get_accounts(1)
                     if acc:
