@@ -47,8 +47,7 @@ from .models import (parse_map, GymDetails, parse_gyms, Account, MainWorker,
                      WorkerStatus, HashKeys, Shadowbanned)
 from .utils import now, clear_dict_response
 from .transform import get_new_coords, jitter_location
-from .account import (setup_api, check_login,
-                      complete_tutorial)
+from .account import (setup_api, check_login, complete_tutorial, reset_account)
 from .captcha import captcha_overseer_thread, handle_captcha
 from .proxy import get_new_proxy
 
@@ -742,6 +741,8 @@ def search_worker_thread(args, account_queue,
 
             # Get an account.
             account = account_queue.get()
+            # Reset account statistics tracked per loop.
+            reset_account(account)
             status.update(WorkerStatus.get_worker(
                 account['username'], scheduler.scan_location))
             status['message'] = 'Switching to account {}.'.format(
@@ -1258,7 +1259,6 @@ def map_request(api, position, no_jitter=False):
         req.get_hatched_eggs()
         req.get_inventory()
         req.check_awarded_badges()
-        req.download_settings()
         req.get_buddy_walked()
         response = req.call()
         response = clear_dict_response(response, True)
@@ -1290,7 +1290,6 @@ def gym_request(api, position, gym, api_version):
         req.get_hatched_eggs()
         req.get_inventory()
         req.check_awarded_badges()
-        req.download_settings()
         req.get_buddy_walked()
         x = req.call()
         x = clear_dict_response(x)
