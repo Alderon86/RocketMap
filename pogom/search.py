@@ -1236,7 +1236,7 @@ def gym_request(api, account, position, gym, api_version):
                             player_latitude=f2i(position[0]),
                             player_longitude=f2i(position[1]),
                             gym_latitude=gym['latitude'],
-                            gym_longitude=gym['longitude']
+                            gym_longitude=gym['longitude'],
                             client_version=api_version)
         req.check_challenge()
         req.get_hatched_eggs()
