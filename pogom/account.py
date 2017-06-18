@@ -56,7 +56,6 @@ def setup_api(args, status, account):
 
 # Use API to check the login status, and retry the login if possible.
 def check_login(args, account, api, position, proxy_url):
-    account['remote_config'] = {}
     app_version = int(args.api_version.replace('.', '0'))
     # Logged in? Enough time left? Cool!
     if api._auth_provider and api._auth_provider._ticket_expire:
@@ -505,7 +504,7 @@ def spin_pokestop(api, account, fort, step_location):
 def spin_pokestop_request(api, account, fort, step_location):
     try:
         req = api.create_request()
-        response = req.fort_search(
+        req.fort_search(
             fort_id=fort['id'],
             fort_latitude=fort['latitude'],
             fort_longitude=fort['longitude'],
