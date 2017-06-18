@@ -135,10 +135,11 @@ def check_login(args, account, api, position, proxy_url):
                                                     '.', '0')))
         request.check_challenge()
         request.get_hatched_eggs()
-        request.get_inventory(last_timestamp_ms=0)
+        request.get_inventory()
         request.check_awarded_badges()
         request.download_settings()
         response = request.call()
+        parse_new_timestamp_ms(account, response)
         parse_download_settings(account, response)
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
@@ -543,11 +544,6 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
     except Exception as e:
         log.error('Exception while encountering Pokémon: %s.', repr(e))
         return False
-
-
-def reset_account(account):
-    account['remote_config'] = {}
-    account['last_timestamp_ms'] = int(time.time())
 
 
 def parse_download_settings(account, api_response):
