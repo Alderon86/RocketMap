@@ -47,8 +47,8 @@ from .models import (parse_map, GymDetails, parse_gyms, Account, MainWorker,
                      WorkerStatus, HashKeys, Shadowbanned)
 from .utils import now, clear_dict_response
 from .transform import get_new_coords, jitter_location
-from .account import (setup_api, check_login,
-                      complete_tutorial)
+from .account import (setup_api, check_login, complete_tutorial
+                      parse_new_timestamp_ms)
 from .captcha import captcha_overseer_thread, handle_captcha
 from .proxy import get_new_proxy
 
@@ -970,7 +970,7 @@ def search_worker_thread(args, account_queue,
 
                 # Make the actual request.
                 scan_date = datetime.utcnow()
-                response_dict = map_request(api, step_location, args.no_jitter)
+                response_dict = map_request(api, account, step_location, args.no_jitter)
                 status['last_scan_date'] = datetime.utcnow()
 
                 # Record the time and the place that the worker made the
@@ -1236,7 +1236,7 @@ def upsertKeys(keys, key_scheduler, db_updates_queue):
     db_updates_queue.put((HashKeys, hashkeys))
 
 
-def map_request(api, position, no_jitter=False):
+def map_request(api, account, position, no_jitter=False):
     # Create scan_location to send to the api based off of position, because
     # tuples aren't mutable.
     if no_jitter:
@@ -1258,12 +1258,13 @@ def map_request(api, position, no_jitter=False):
                             cell_id=cell_ids)
         req.check_challenge()
         req.get_hatched_eggs()
-        req.get_inventory()
+        req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
-        req.download_settings()
         req.get_buddy_walked()
         response = req.call()
+
         response = clear_dict_response(response, True)
+        parse_new_timestamp_ms(account, response)
         return response
 
     except HashingOfflineException as e:
@@ -1276,9 +1277,9 @@ def map_request(api, position, no_jitter=False):
         return False
 
 
-def gym_request(api, position, gym, api_version):
+def gym_request(api, account, position, gym, api_version):
     try:
-        log.debug('Getting details for gym @ %f/%f (%fkm away).',
+        log.debug('Getting details for gym @ %f/%f (%fkm away)',
                   gym['latitude'], gym['longitude'],
                   calc_distance(position, [gym['latitude'], gym['longitude']]))
         req = api.create_request()
@@ -1286,18 +1287,17 @@ def gym_request(api, position, gym, api_version):
                             player_latitude=f2i(position[0]),
                             player_longitude=f2i(position[1]),
                             gym_latitude=gym['latitude'],
-                            gym_longitude=gym['longitude'],
-                            client_version=api_version)
+                            gym_longitude=gym['longitude'])
         req.check_challenge()
         req.get_hatched_eggs()
-        req.get_inventory()
+        req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
-        req.download_settings()
         req.get_buddy_walked()
-        x = req.call()
-        x = clear_dict_response(x)
-        # Print pretty(x).
-        return x
+        response = req.call()
+
+        parse_new_timestamp_ms(account, response)
+        response = clear_dict_response(response)
+        return response
 
     except Exception as e:
         log.warning('Exception while downloading gym details: %s.', repr(e))
