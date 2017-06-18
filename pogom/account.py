@@ -123,7 +123,8 @@ def check_login(args, account, api, position, proxy_url):
             account['banned'] = True
 
     except Exception as e:
-        log.error('Exception getting player information: %s', repr(e))
+        log.exception('Login for account %s failed. Exception in' +
+                      'Get Player request: %s', account, repr(e))
 
     try:  # 3 - Download Remote Config Version request.
         old_config = account['remote_config']
