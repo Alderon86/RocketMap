@@ -970,7 +970,8 @@ def search_worker_thread(args, account_queue,
 
                 # Make the actual request.
                 scan_date = datetime.utcnow()
-                response_dict = map_request(api, account, step_location, args.no_jitter)
+                response_dict = map_request(api, account, step_location,
+                                            args.no_jitter)
                 status['last_scan_date'] = datetime.utcnow()
 
                 # Record the time and the place that the worker made the
