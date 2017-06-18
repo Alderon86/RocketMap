@@ -65,6 +65,8 @@ def check_login(args, account, api, position, proxy_url):
             return
 
     # Try to login. Repeat a few times, but don't get stuck here.
+    log.info(
+        'Logging in account {}...'.format(account['username']))
     num_tries = 0
     # One initial try + login_retries.
     while num_tries < (args.login_retries + 1):
@@ -423,19 +425,19 @@ def complete_tutorial(api, account, tutorial_state):
 # Complete tutorial with a level up by a Pokestop spin.
 # API argument needs to be a logged in API instance.
 # Called during fort parsing in models.py
-def tutorial_pokestop_spin(api, player_level, forts, step_location, account):
-    if player_level > 1:
+def tutorial_pokestop_spin(api, account, forts, step_location):
+    if account['level'] > 1:
         log.debug(
             'No need to spin a Pokestop. ' +
             'Account %s is already level %d.',
-            account['username'], player_level)
+            account['username'], account['level'])
     else:  # Account needs to spin a Pokestop for level 2.
         log.debug(
             'Spinning Pokestop for account %s.',
             account['username'])
         for fort in forts:
             if fort.get('type') == 1:
-                if spin_pokestop(api, fort, step_location):
+                if spin_pokestop(api, account, fort, step_location):
                     log.debug(
                         'Account %s successfully spun a Pokestop ' +
                         'after completed tutorial.',
@@ -461,13 +463,14 @@ def get_player_level(map_dict):
     return 0
 
 
-def spin_pokestop(api, fort, step_location):
+def spin_pokestop(api, account, fort, step_location):
     spinning_radius = 0.04
     if in_radius((fort['latitude'], fort['longitude']), step_location,
                  spinning_radius):
         log.debug('Attempt to spin Pokestop (ID %s)', fort['id'])
         time.sleep(random.uniform(0.8, 1.8))  # Do not let Niantic throttle
-        spin_response = spin_pokestop_request(api, fort, step_location)
+        spin_response = spin_pokestop_request(api, account, fort,
+                                              step_location)
         time.sleep(random.uniform(2, 4))  # Do not let Niantic throttle
 
         # Check for reCaptcha
@@ -497,10 +500,10 @@ def spin_pokestop(api, fort, step_location):
     return False
 
 
-def spin_pokestop_request(api, account, fort, step_location, response):
+def spin_pokestop_request(api, account, fort, step_location):
     try:
         req = api.create_request()
-        spin_pokestop_response = req.fort_search(
+        req.fort_search(
             fort_id=fort['id'],
             fort_latitude=fort['latitude'],
             fort_longitude=fort['longitude'],
@@ -511,10 +514,10 @@ def spin_pokestop_request(api, account, fort, step_location, response):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        spin_pokestop_response = req.call()
+        response = req.call()
         parse_new_timestamp_ms(account, response)
 
-        return spin_pokestop_response
+        return response
 
     except Exception as e:
         log.error('Exception while spinning Pokestop: %s.', repr(e))
