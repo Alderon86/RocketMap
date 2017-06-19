@@ -180,6 +180,7 @@ class Account(BaseModel):
 
             for a in query:
                 accounts.append(a)
+                a['db_level'] = a['level']
 
             # Sets free all instance-flagged accounts which are not used now
             if init:
@@ -244,6 +245,7 @@ class Account(BaseModel):
         (Account(username=account['username'],
                  level=account['level'])
          .save())
+        account['db_level'] = account['level']
 
     # Resets instance-flags of accounts to set them free for re-use
     @staticmethod
@@ -2581,9 +2583,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
 
     # Show the DB this account is still in use
     Account.heartbeat(account)
-
-    if level != account['level']:
-        account['level'] = level
+    if account['level'] > account['db_level']:
         Account.set_level(account)
     if pokemon:
         db_update_queue.put((Pokemon, pokemon))

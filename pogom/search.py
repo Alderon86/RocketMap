@@ -48,7 +48,7 @@ from .models import (parse_map, GymDetails, parse_gyms, Account, MainWorker,
 from .utils import now, clear_dict_response
 from .transform import get_new_coords, jitter_location
 from .account import (setup_api, check_login, complete_tutorial,
-                      parse_new_timestamp_ms)
+                      parse_get_inventory)
 from .captcha import captcha_overseer_thread, handle_captcha
 from .proxy import get_new_proxy
 
@@ -1265,7 +1265,7 @@ def map_request(api, account, position, no_jitter=False):
         response = req.call()
 
         response = clear_dict_response(response, True)
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
         return response
 
     except HashingOfflineException as e:
@@ -1296,7 +1296,7 @@ def gym_request(api, account, position, gym, api_version):
         req.get_buddy_walked()
         response = req.call()
 
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
         response = clear_dict_response(response)
         return response
 

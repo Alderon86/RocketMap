@@ -141,7 +141,7 @@ def check_login(args, account, api, position, proxy_url):
         request.check_awarded_badges()
         request.download_settings()
         response = request.call()
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
         parse_download_settings(account, response)
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
@@ -173,7 +173,7 @@ def check_login(args, account, api, position, proxy_url):
                 request.download_settings(hash=account[
                     'remote_config']['hash'])
                 response = request.call()
-                parse_new_timestamp_ms(account, response)
+                parse_get_inventory(account, response)
                 req_count += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
@@ -214,7 +214,7 @@ def check_login(args, account, api, position, proxy_url):
                 request.download_settings(hash=account[
                     'remote_config']['hash'])
                 response = request.call()
-                parse_new_timestamp_ms(account, response)
+                parse_get_inventory(account, response)
                 req_count += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
@@ -244,7 +244,7 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
         time.sleep(random.uniform(.2, .3))
 
     except Exception as e:
@@ -261,7 +261,7 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
         time.sleep(random.uniform(.45, .7))
 
     except Exception as e:
@@ -278,7 +278,7 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
 
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
@@ -448,8 +448,8 @@ def tutorial_pokestop_spin(api, account, forts, step_location):
     return False
 
 
-def get_player_level(map_dict):
-    inventory_items = map_dict['responses'].get(
+def get_player_level(api_response):
+    inventory_items = api_response['responses'].get(
         'GET_INVENTORY', {}).get(
         'inventory_delta', {}).get(
         'inventory_items', [])
@@ -516,7 +516,7 @@ def spin_pokestop_request(api, account, fort, step_location):
         req.check_awarded_badges()
         req.get_buddy_walked()
         response = req.call()
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
 
         return response
 
@@ -541,7 +541,7 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
         req.check_awarded_badges()
         req.get_buddy_walked()
         encounter_result = req.call()
-        parse_new_timestamp_ms(account, response)
+        parse_get_inventory(account, response)
 
         return encounter_result
     except Exception as e:
@@ -571,6 +571,12 @@ def parse_download_settings(account, api_response):
         return True
 
 
+# Perform parsing for account information from the GET_INVENTORY response.
+def parse_get_inventory(account, api_response):
+    parse_new_timestamp_ms(account, api_response)
+    parse_player_level(account, api_response)
+
+
 # Parse new timestamp from the GET_INVENTORY response.
 def parse_new_timestamp_ms(account, api_response):
     if 'GET_INVENTORY' in api_response['responses']:
@@ -579,6 +585,9 @@ def parse_new_timestamp_ms(account, api_response):
                                                     ['inventory_delta']
                                         .get('new_timestamp_ms', 0))
 
-        player_level = get_player_level(api_response)
-        if player_level:
-            account['level'] = player_level
+
+# Parse player level from the GET_INVENTORY response.
+def parse_player_level(account, api_response):
+    player_level = get_player_level(api_response)
+    if player_level > account['level']:
+        account['level'] = player_level
