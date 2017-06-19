@@ -2029,9 +2029,9 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
     sp_id_list = []
     captcha_url = ''
     missed = []
-    common_ids = [16, 19, 23, 27, 29, 32, 41, 43, 46, 52, 54, 60, 69,
-                  72, 74, 77, 81, 98, 118, 120, 129, 161, 165, 167,
-                  177, 183, 187, 191, 194, 198, 209, 218]
+    common_ids = [4, 16, 19, 23, 27, 29, 32, 37, 41, 43, 46, 52, 54, 58, 60,
+                  69, 72, 74, 77, 81, 90, 98, 118, 120, 129, 155, 161, 165,
+                  167, 177, 183, 187, 191, 194, 198, 209, 218, 220, 228]
 
     # Consolidate the individual lists in each cell into two lists of Pokemon
     # and a list of forts.

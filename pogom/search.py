@@ -938,11 +938,13 @@ def search_worker_thread(args, account_queue,
                 if account['warn']:
                     Account.set_warn(account)
                     log.warning('Account {} carries warn flag and is ' +
-                                'possibly shadowbanned - check during scans.')
+                                'possibly shadowbanned and will be checked ' +
+                                'during scans.')
+
                 if account['banned']:
                     Account.set_banned(account)
-                    log.warning('Account {} is for sure banned and will be ' +
-                                'no longer be fetched from DB.')
+                    log.warning('Account {} is for sure banned and will no ' +
+                                'longer be fetched from DB.')
                     raise Exception
 
                 # Only run this when it's the account's first login, after
