@@ -742,7 +742,6 @@ def search_worker_thread(args, account_queue,
 
             # Get an account.
             account = account_queue.get()
-            # Reset account statistics tracked per loop.
             account['remote_config'] = {}
             status.update(WorkerStatus.get_worker(
                 account['username'], scheduler.scan_location))
@@ -1130,8 +1129,8 @@ def search_worker_thread(args, account_queue,
                                     current_gym, len(gyms_to_update),
                                     step_location[0], step_location[1])
                             time.sleep(random.random() + 2)
-                            response = gym_request(api,  step_location, gym,
-                                                   args.api_version)
+                            response = gym_request(api, account, step_location,
+                                                   gym, args.api_version)
 
                             # Make sure the gym was in range. (Sometimes the
                             # API gets cranky about gyms that are ALMOST 1km
@@ -1290,7 +1289,8 @@ def gym_request(api, account, position, gym, api_version):
                             player_latitude=f2i(position[0]),
                             player_longitude=f2i(position[1]),
                             gym_latitude=gym['latitude'],
-                            gym_longitude=gym['longitude'])
+                            gym_longitude=gym['longitude'],
+                            client_version=api_version)
         req.check_challenge()
         req.get_hatched_eggs()
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
