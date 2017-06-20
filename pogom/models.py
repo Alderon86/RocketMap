@@ -2217,8 +2217,8 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                     spinning_try(api, f, step_location, account, map_dict,
                                  args)
 
-                if ((f['id'], int(f['last_modified_timestamp_ms'] / 1000.0))
-                        in encountered_pokestops):
+                if ((f['id'], int(f['last_modified_timestamp_ms'] / 1000.0) in
+                     encountered_pokestops)) and not args.pokestop_spinning:
                     # If pokestop has been encountered before and hasn't
                     # changed don't process it.
                     stopsskipped += 1

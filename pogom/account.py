@@ -470,6 +470,7 @@ def spinning_try(api, fort, step_location, account, map_dict, args):
         log.info('Account %s has reached its Pokestop spinning limits.',
                  account['username'])
         return False
+
     # Set 50% Chance to spin a Pokestop.
     if random.randint(0, 100) < 50:
         time.sleep(random.uniform(2, 4))  # Do not let Niantic throttle.
@@ -492,7 +493,6 @@ def spinning_try(api, fort, step_location, account, map_dict, args):
             parse_inventory(api, account, map_dict)
             clear_inventory(api, account)
             account['session_spins'] += 1
-            account['used_pokestops'][fort['id']] = time.time()
             incubate_eggs(api, account)
             return True
         # Catch all other results.
@@ -524,7 +524,6 @@ def parse_inventory(api, account, map_dict):
     parsed_pokemons = 0
     parsed_eggs = 0
     parsed_incubators = 0
-    # while not using deltas we are inserting all every time
     account['incubators'] = []
     account['eggs'] = []
     for item in inventory:
@@ -536,9 +535,8 @@ def parse_inventory(api, account, map_dict):
             account['walked'] = stats.get('km_walked', 0)
 
             log.info('Parsed %s player stats: level %d, %f km ' +
-                     'walked, %d spins.',
-                     account['username'], account['level'], account['walked'],
-                     account['spins'])
+                     'walked, %d spins.', account['username'],
+                     account['level'], account['walked'], account['spins'])
         elif 'item' in item_data:
             item_id = item_data['item']['item_id']
             item_count = item_data['item'].get('count', 0)
@@ -550,7 +548,7 @@ def parse_inventory(api, account, map_dict):
                 if incubator.get('pokemon_id', 0):
                     left = (incubator['target_km_walked']
                             - account['walked'])
-                    log.info('Egg kms remaining: %.2f', left)
+                    log.debug('Egg kms remaining: %.2f', left)
                 else:
                     account['incubators'].append({
                         'id': incubator['id'],
@@ -592,21 +590,18 @@ def parse_inventory(api, account, map_dict):
 
 def reset_account(account):
     account['start_time'] = time.time()
-    account['max_items'] = 350
-    account['max_pokemons'] = 250
     account['items'] = {}
     account['pokemons'] = {}
     account['incubators'] = []
     account['eggs'] = []
     account['level'] = 0
-    account['used_pokestops'] = {}
     account['spins'] = 0
     account['session_spins'] = 0
     account['hour_spins'] = 0
     account['walked'] = 0.0
 
 
-def cleanup_account_stats(account, pokestop_timeout):
+def cleanup_account_stats(account):
     elapsed_time = time.time() - account['start_time']
 
     # Just to prevent division by 0 errors, when needed
@@ -616,30 +611,6 @@ def cleanup_account_stats(account, pokestop_timeout):
 
     spins_h = account['session_spins'] * 3600.0 / elapsed_time
     account['hour_spins'] = spins_h
-
-    # Refresh visited pokestops that were on timeout.
-    account['used_pokestops'] = {
-            k: v for k, v in account['used_pokestops'].iteritems()
-            if (v + pokestop_timeout) > time.time()
-        }
-
-
-def clear_inventory_request(api, item_id, drop_count):
-    try:
-        req = api.create_request()
-        req.recycle_inventory_item(item_id=item_id, count=drop_count)
-        req.check_challenge()
-        req.get_hatched_eggs()
-        req.get_inventory()
-        req.check_awarded_badges()
-        req.get_buddy_walked()
-        clear_inventory_response = req.call()
-
-        return clear_inventory_response
-
-    except Exception as e:
-        log.warning('Exception while clearing Inventory: %s', repr(e))
-        return False
 
 
 def clear_inventory(api, account):
@@ -707,6 +678,24 @@ def incubate_eggs(api, account):
     return
 
 
+def clear_inventory_request(api, item_id, drop_count):
+    try:
+        req = api.create_request()
+        req.recycle_inventory_item(item_id=item_id, count=drop_count)
+        req.check_challenge()
+        req.get_hatched_eggs()
+        req.get_inventory()
+        req.check_awarded_badges()
+        req.get_buddy_walked()
+        clear_inventory_response = req.call()
+
+        return clear_inventory_response
+
+    except Exception as e:
+        log.warning('Exception while clearing Inventory: %s', repr(e))
+        return False
+
+
 def request_use_item_egg_incubator(api, account, incubator_id, egg_id):
     try:
         req = api.create_request()
@@ -724,4 +713,24 @@ def request_use_item_egg_incubator(api, account, incubator_id, egg_id):
 
     except Exception as e:
         log.warning('Exception while putting an egg in incubator: %s', repr(e))
+    return False
+
+
+def request_release_pokemon(api, account, pokemon_id, pokemon_ids):
+    try:
+        req = api.create_request()
+        req.release_pokemon(
+            pokemon_id=pokemon_id,
+            pokemon_ids=pokemon_ids
+        )
+        req.check_challenge()
+        req.get_hatched_eggs()
+        req.get_inventory()
+        req.check_awarded_badges()
+        req.get_buddy_walked()
+        req.call()
+
+    except Exception as e:
+        log.error('Exception while releasing Pokemon: %s', repr(e))
+
     return False
