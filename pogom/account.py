@@ -181,13 +181,12 @@ def check_login(args, account, api, position, proxy_url):
                 else:
                     i += 1
                     time.sleep(random.uniform(.3, .5))
-                    result = response['responses']['GET_ASSET_DIGEST']
-                    page_offset = result['page_offset']
-                    page_timestamp = result['timestamp_ms']
-
-                    time.sleep(random.uniform(.53, 1.1))
-                    log.debug('Completed %d requests to get asset digest.',
-                              req_count)
+                result = response['responses']['GET_ASSET_DIGEST']
+                page_offset = result['page_offset']
+                page_timestamp = result['timestamp_ms']
+                time.sleep(random.uniform(.53, 1.1))
+                log.debug('Completed %d requests to get asset digest.',
+                          req_count)
 
             except Exception as e:
                 log.exception('Error while downloading Asset Digest: %s.',
@@ -225,12 +224,12 @@ def check_login(args, account, api, position, proxy_url):
                     i += 1
                     time.sleep(random.uniform(.3, .5))
 
-                    result = response['responses']['DOWNLOAD_ITEM_TEMPLATES']
-                    page_offset = result['page_offset']
-                    page_timestamp = result['timestamp_ms']
-                    log.debug('Completed %d requests to download' +
-                              ' item templates.', req_count)
-                    time.sleep(random.uniform(.53, 1.1))
+                result = response['responses']['DOWNLOAD_ITEM_TEMPLATES']
+                page_offset = result['page_offset']
+                page_timestamp = result['timestamp_ms']
+                log.debug('Completed %d requests to download' +
+                          ' item templates.', req_count)
+                time.sleep(random.uniform(.53, 1.1))
             except Exception as e:
                 log.exception('Login for account %s failed. Exception in ' +
                               'downloading Item Templates: %s.',
