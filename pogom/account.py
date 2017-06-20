@@ -150,6 +150,7 @@ def check_login(args, account, api, position, proxy_url):
     config = account['remote_config']
     if config['asset_time'] > old_config.get('asset_time', 0):
         i = random.randint(0, 3)
+        req_count = 0
         result = 2
         page_offset = 0
         page_timestamp = 0
@@ -172,6 +173,7 @@ def check_login(args, account, api, position, proxy_url):
                     'remote_config']['hash'])
                 response = request.call()
                 parse_new_timestamp_ms(account, response)
+                req_count += 1
                 total_req += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
@@ -195,6 +197,7 @@ def check_login(args, account, api, position, proxy_url):
     # 5 - Download Item Templates request.
     if config['template_time'] > old_config.get('template_time', 0):
         i = random.randint(0, 3)
+        req_count = 0
         result = 2
         page_offset = 0
         page_timestamp = 0
@@ -213,6 +216,7 @@ def check_login(args, account, api, position, proxy_url):
                     'remote_config']['hash'])
                 response = request.call()
                 parse_new_timestamp_ms(account, response)
+                req_count += 1
                 total_req += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
