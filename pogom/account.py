@@ -56,6 +56,7 @@ def setup_api(args, status, account):
 
 # Use API to check the login status, and retry the login if possible.
 def check_login(args, account, api, position, proxy_url):
+    total_req = 0
     app_version = int(args.api_version.replace('.', '0'))
     # Logged in? Enough time left? Cool!
     if api._auth_provider and api._auth_provider._ticket_expire:
@@ -103,11 +104,13 @@ def check_login(args, account, api, position, proxy_url):
     try:  # 1 - Make an empty request to mimick real app behavior.
         request = api.create_request()
         request.call()
+        total_req += 1
         time.sleep(random.uniform(.43, .97))
     except Exception as e:
         log.exception('Login for account %s failed.' +
                       ' Exception in call request: %s', account['username'],
                       repr(e))
+        return False
 
     try:  # 2 - Get Player request.
         req = api.create_request()
@@ -117,10 +120,12 @@ def check_login(args, account, api, position, proxy_url):
                 'language': 'en',
                 'timezone': 'America/Denver'})
         req.call()
+        total_req += 1
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'Get Player request: %s', account['username'], repr(e))
+        return False
 
     try:  # 3 - Download Remote Config Version request.
         old_config = account['remote_config']
@@ -133,16 +138,17 @@ def check_login(args, account, api, position, proxy_url):
         request.check_awarded_badges()
         request.download_settings()
         response = request.call()
+        total_req += 1
         parse_download_settings(account, response)
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
+        return False
 
     # 4 - Get Asset Digest request.
     config = account['remote_config']
     if config['asset_time'] > old_config.get('asset_time', 0):
-        req_count = 0
         i = random.randint(0, 3)
         result = 2
         page_offset = 0
@@ -166,7 +172,7 @@ def check_login(args, account, api, position, proxy_url):
                     'remote_config']['hash'])
                 response = request.call()
                 parse_new_timestamp_ms(account, response)
-                req_count += 1
+                total_req += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
                     i = 0
@@ -184,10 +190,10 @@ def check_login(args, account, api, position, proxy_url):
             except Exception as e:
                 log.exception('Error while downloading Asset Digest: %s.',
                               repr(e))
+                return False
 
     # 5 - Download Item Templates request.
     if config['template_time'] > old_config.get('template_time', 0):
-        req_count = 0
         i = random.randint(0, 3)
         result = 2
         page_offset = 0
@@ -207,7 +213,7 @@ def check_login(args, account, api, position, proxy_url):
                     'remote_config']['hash'])
                 response = request.call()
                 parse_new_timestamp_ms(account, response)
-                req_count += 1
+                total_req += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
                     i = 0
@@ -225,6 +231,7 @@ def check_login(args, account, api, position, proxy_url):
                 log.exception('Login for account %s failed. Exception in ' +
                               'downloading Item Templates: %s.',
                               account['username'], repr(e))
+                return False
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
@@ -236,12 +243,14 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
+        total_req += 1
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.2, .3))
 
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'get_player_profile: %s', account['username'], repr(e))
+        return False
 
     try:  # 7 - Check if there are level up rewards to claim.
         request = api.create_request()
@@ -253,12 +262,14 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
+        total_req += 1
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.45, .7))
 
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
+        return False
 
     try:  # 8 - Register Background Device request.
         request = api.create_request()
@@ -270,17 +281,20 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
         response = request.call()
+        total_req += 1
         parse_new_timestamp_ms(account, response)
-
         time.sleep(random.uniform(.53, 1.1))
+
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'Background Device: %s', account['username'], repr(e))
+        return False
 
     # TODO: # 9 - Make a request to get Shop items.
 
-        log.debug('Login for account %s successful.', account['username'])
-        time.sleep(random.uniform(10, 20))
+    log.debug('Login for account %s with %s requests successful.',
+              account['username'], total_req)
+    time.sleep(random.uniform(10, 20))
 
 
 # Check if all important tutorial steps have been completed.
