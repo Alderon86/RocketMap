@@ -1642,6 +1642,8 @@ class SpawnPoint(BaseModel):
         # For each spawn work out if it is in the hex (clipping the diagonals).
         in_hex = []
         for spawn in sp:
+            if spawn['missed_count'] > 10:
+                continue
             # Get the offset from the center of each spawn in km.
             offset = [math.radians(spawn['latitude'] - center[0]) * R,
                       math.radians(spawn['longitude'] - center[1]) *
