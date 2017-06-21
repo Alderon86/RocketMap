@@ -2808,7 +2808,7 @@ def clean_db_loop(args):
 
             query = (Account
                      .update(in_use=False, instance_name=None)
-                     .where((Account.is_null(False)) &
+                     .where((Account.instance_name.is_null(False)) &
                             (Account.last_modified <
                              (datetime.utcnow() - timedelta(minutes=60))))
                      .execute())
