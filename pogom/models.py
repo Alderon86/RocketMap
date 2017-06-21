@@ -2800,28 +2800,44 @@ def clean_db_loop(args):
             # Some quite inactive Accounts in use? Reset them.
             # Caused by hard shut-down or more workers than needed.
             query = (Account
-                     .update(in_use=False, instance_name=None)
+                     .update(in_use=False)
                      .where((Account.in_use == 1) &
                             (Account.last_modified <
                              (datetime.utcnow() - timedelta(minutes=15))))
                      .execute())
 
-            # Resets failed accounts after rest time for re-use.
-            # Fail flag remains until next successful scan
             query = (Account
-                     .update(instance_name=None, fail=False)
+                     .update(in_use=False, instance_name=None)
+                     .where((Account.is_null(False)) &
+                            (Account.last_modified <
+                             (datetime.utcnow() - timedelta(minutes=60))))
+                     .execute())
+
+            # Resets failed accounts after rest time for re-use.
+            query = (Account
+                     .update(in_use=False, instance_name=None, fail=False)
                      .where((Account.fail == 1) &
                             (Account.last_modified <
                              (datetime.utcnow() - timedelta(
                                 seconds=args.account_rest_interval))))
                      .execute())
 
-            # Resets shadowbans after one week.
+            # Resets warn after one week.
             query = (Account
-                     .update(shadowban=False)
-                     .where((Account.shadowban == 1) &
+                     .update(in_use=False, instance_name=None, fail=False,
+                             warn=False)
+                     .where((Account.warn == 1) &
                             (Account.last_modified <
                              (datetime.utcnow() - timedelta(weeks=1))))
+                     .execute())
+
+            # Resets shadowbans after one week.
+            query = (Account
+                     .update(in_use=False, instance_name=None, fail=False,
+                             warn=False, shadowban=False)
+                     .where((Account.shadowban == 1) &
+                            (Account.last_modified <
+                             (datetime.utcnow() - timedelta(weeks=2))))
                      .execute())
 
             query = (MainWorker

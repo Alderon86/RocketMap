@@ -327,7 +327,8 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
     to prevent accounts from being cycled through too quickly.
     '''
     while account_queue.empty():
-        args.accounts = Account.get_accounts(args.workers, init=True)
+        args.accounts = Account.get_accounts(args.workers, init=True,
+                                             max_level=29)
         for a in args.accounts:
             account_queue.put(a)
 
@@ -793,7 +794,7 @@ def search_worker_thread(args, account_queue,
                                              'reason': 'failures'})
                     Account.set_fail(account)
 
-                    acc = Account.get_accounts(1)
+                    acc = Account.get_accounts(1, max_level=29)
                     if acc:
                         account_queue.put(acc.pop())
 
@@ -815,7 +816,7 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': now(),
                                              'reason': 'empty scans'})
                     Account.set_fail(account)
-                    acc = Account.get_accounts(1)
+                    acc = Account.get_accounts(1, max_level=29)
                     if acc:
                         account_queue.put(acc.pop())
 
@@ -836,7 +837,7 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': now(),
                                              'reason': 'shadowban'})
                     Account.set_fail(account)
-                    acc = Account.get_accounts(1)
+                    acc = Account.get_accounts(1, max_level=29)
                     if acc:
                         account_queue.put(acc.pop())
 
@@ -870,7 +871,7 @@ def search_worker_thread(args, account_queue,
                         account_failures.append({'account': account,
                                                  'last_fail_time': now(),
                                                  'reason': 'rest interval'})
-                        acc = Account.get_accounts(1)
+                        acc = Account.get_accounts(1, max_level=29)
                         if acc:
                             account_queue.put(acc.pop())
 
@@ -999,7 +1000,7 @@ def search_worker_thread(args, account_queue,
                                              response_dict, step_location)
                     if captcha is not None:
                         account_queue.task_done()
-                        acc = Account.get_accounts(1)
+                        acc = Account.get_accounts(1, max_level=29)
                         if acc:
                             account_queue.put(acc.pop())
 
@@ -1054,7 +1055,7 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': sb_time,
                                              'reason': 'shadowban'})
                     Account.set_shadowban(account)
-                    acc = Account.get_accounts(1)
+                    acc = Account.get_accounts(1, max_level=29)
                     if acc:
                         account_queue.put(acc.pop())
 
@@ -1218,7 +1219,7 @@ def search_worker_thread(args, account_queue,
                                      'last_fail_time': now(),
                                      'reason': 'exception'})
             Account.set_fail(account)
-            acc = Account.get_accounts(1)
+            acc = Account.get_accounts(1, max_level=29)
             if acc:
                 account_queue.put(acc.pop())
 
