@@ -172,6 +172,8 @@ def check_login(args, account, api, position, proxy_url):
                     'remote_config']['hash'])
                 response = request.call()
                 parse_get_inventory(account, response)
+
+                get_asset_digest = response['responses']['GET_ASSET_DIGEST']
                 req_count += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
@@ -179,9 +181,9 @@ def check_login(args, account, api, position, proxy_url):
                 else:
                     i += 1
                     time.sleep(random.uniform(.3, .5))
-                    result = response['responses']['GET_ASSET_DIGEST']
-                    page_offset = result['page_offset']
-                    page_timestamp = result['timestamp_ms']
+                    result = get_asset_digest.get('result', 0)
+                    page_offset = get_asset_digest.get('page_offset', 0)
+                    page_timestamp = get_asset_digest.get('timestamp_ms', 0)
 
                     time.sleep(random.uniform(.53, 1.1))
                     log.debug('Completed %d requests to get asset digest.',
@@ -213,6 +215,9 @@ def check_login(args, account, api, position, proxy_url):
                     'remote_config']['hash'])
                 response = request.call()
                 parse_get_inventory(account, response)
+
+                download_item_templates = response['responses'][
+                    'DOWNLOAD_ITEM_TEMPLATES']
                 req_count += 1
                 if i > 2:
                     time.sleep(random.uniform(1.4, 1.6))
@@ -221,9 +226,10 @@ def check_login(args, account, api, position, proxy_url):
                     i += 1
                     time.sleep(random.uniform(.3, .5))
 
-                    result = response['responses']['DOWNLOAD_ITEM_TEMPLATES']
-                    page_offset = result['page_offset']
-                    page_timestamp = result['timestamp_ms']
+                    result = download_item_templates.get('result', 0)
+                    page_offset = download_item_templates.get('page_offset', 0)
+                    page_timestamp = download_item_templates.get(
+                        'timestamp_ms', 0)
                     log.debug('Completed %d requests to download' +
                               ' item templates.', req_count)
                     time.sleep(random.uniform(.53, 1.1))
@@ -265,23 +271,6 @@ def check_login(args, account, api, position, proxy_url):
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
-
-    try:  # 8 - Register Background Device request.
-        request = api.create_request()
-        request.register_background_device(device_type='apple_watch')
-        request.check_challenge()
-        request.get_hatched_eggs()
-        request.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
-        request.check_awarded_badges()
-        request.download_settings(hash=account['remote_config']['hash'])
-        request.get_buddy_walked()
-        response = request.call()
-        parse_get_inventory(account, response)
-
-        time.sleep(random.uniform(.53, 1.1))
-    except Exception as e:
-        log.exception('Login for account %s failed. Exception in ' +
-                      'Background Device: %s', account['username'], repr(e))
 
     # TODO: # 9 - Make a request to get Shop items.
 

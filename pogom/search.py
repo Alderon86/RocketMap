@@ -1260,6 +1260,7 @@ def map_request(api, account, position, no_jitter=False):
                             since_timestamp_ms=timestamps,
                             cell_id=cell_ids)
         req.check_challenge()
+        req.get_inbox()
         req.get_hatched_eggs()
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
