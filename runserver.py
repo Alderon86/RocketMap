@@ -30,7 +30,7 @@ from pogom.webhook import wh_updater
 from pogom.proxy import check_proxies, proxies_refresher
 
 # Currently supported pgoapi.
-pgoapi_version = "1.1.7"
+pgoapi_version = "1.2.0"
 
 # Moved here so logger is configured at load time.
 logging.basicConfig(
