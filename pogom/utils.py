@@ -1005,8 +1005,8 @@ def generate_device_info(identifier):
     ios10 = ('10.0', '10.0.1', '10.0.2', '10.0.3', '10.1', '10.1.1')
 
     device_pick = devices[pick_hash % len(devices)]
-    device_info['device_model_boot'] = device_pick
-    device_info['hardware_model'] = IPHONES[device_pick]
+    device_info['device_model_boot'] = device_pick + '\x00'
+    device_info['hardware_model'] = IPHONES[device_pick] + '\x00'
     device_info['device_id'] = md5.hexdigest()
 
     if device_pick in ('iPhone9,1', 'iPhone9,2', 'iPhone9,3', 'iPhone9,4'):

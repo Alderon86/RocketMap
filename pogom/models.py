@@ -2271,15 +2271,20 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                     hlvl_api.set_position(*scan_location)
 
                     # Log in.
-                    check_login(args, hlvl_account, hlvl_api, scan_location,
-                                status['proxy_url'])
+                    try:
+                        print "Starting login for encoutner with {}".format(hlvl_account['username'])
+                        check_login(args, hlvl_account, hlvl_api,
+                                    scan_location, status['proxy_url'])
 
-                    # Encounter Pokémon.
-                    encounter_result = encounter_pokemon_request(
-                        hlvl_api,
-                        p['encounter_id'],
-                        p['spawn_point_id'],
-                        scan_location)
+                        # Encounter Pokémon.
+                        encounter_result = encounter_pokemon_request(
+                            hlvl_api,
+                            p['encounter_id'],
+                            p['spawn_point_id'],
+                            scan_location)
+                    except Exception as e:
+                        log.exception('Exception in encountering with account '
+                                  '%s: %s',hlvl_account['username'], repr(e))
 
                     # We don't want to tie an hlvl_account to an instance
                     Account.set_free(hlvl_account)

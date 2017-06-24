@@ -1260,11 +1260,11 @@ def map_request(api, account, position, no_jitter=False):
                             since_timestamp_ms=timestamps,
                             cell_id=cell_ids)
         req.check_challenge()
-        req.get_inbox()
         req.get_hatched_eggs()
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
+        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = req.call()
 
         response = clear_dict_response(response, True)
@@ -1282,6 +1282,7 @@ def map_request(api, account, position, no_jitter=False):
 
 
 def gym_request(api, account, position, gym, api_version):
+    time.sleep(random.uniform(10, 20))
     try:
         log.debug('Getting details for gym @ %f/%f (%fkm away).',
                   gym['latitude'], gym['longitude'],

@@ -19,6 +19,10 @@ class TooManyLoginAttempts(Exception):
     pass
 
 
+class LoginSequenceFail(Exception):
+    pass
+
+
 # Create the API object that'll be used to scan.
 def setup_api(args, status, account):
     # Create the API instance this will use.
@@ -108,6 +112,7 @@ def check_login(args, account, api, position, proxy_url):
         log.exception('Login for account %s failed.' +
                       ' Exception in call request: %s', account['username'],
                       repr(e))
+        raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 2 - Get Player request.
         request = api.create_request()
@@ -127,6 +132,7 @@ def check_login(args, account, api, position, proxy_url):
         log.exception('Login for account %s failed.' +
                       ' Exception in get_player: %s', account['username'],
                       repr(e))
+        raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 3 - Download Remote Config Version request.
         old_config = account['remote_config']
@@ -144,10 +150,11 @@ def check_login(args, account, api, position, proxy_url):
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
+        raise LoginSequenceFail('Failed during login sequence.')
 
     # 4 - Get Asset Digest request.
-    config = account['remote_config']
-    if config['asset_time'] > old_config.get('asset_time', 0):
+    config = account.get('remote_config', {})
+    if config.get('asset_time', 0) > old_config.get('asset_time', 0):
         req_count = 0
         i = random.randint(0, 3)
         result = 2
@@ -192,9 +199,10 @@ def check_login(args, account, api, position, proxy_url):
             except Exception as e:
                 log.exception('Error while downloading Asset Digest: %s.',
                               repr(e))
+                raise LoginSequenceFail('Failed during login sequence.')
 
     # 5 - Download Item Templates request.
-    if config['template_time'] > old_config.get('template_time', 0):
+    if config.get('template_time', 0) > old_config.get('template_time', 0):
         req_count = 0
         i = random.randint(0, 3)
         result = 2
@@ -237,6 +245,7 @@ def check_login(args, account, api, position, proxy_url):
                 log.exception('Login for account %s failed. Exception in ' +
                               'downloading Item Templates: %s.',
                               account['username'], repr(e))
+                raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
@@ -250,10 +259,10 @@ def check_login(args, account, api, position, proxy_url):
         response = request.call()
         parse_get_inventory(account, response)
         time.sleep(random.uniform(.2, .3))
-
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'get_player_profile: %s', account['username'], repr(e))
+        raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 7 - Check if there are level up rewards to claim.
         request = api.create_request()
@@ -271,6 +280,7 @@ def check_login(args, account, api, position, proxy_url):
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
+        raise LoginSequenceFail('Failed during login sequence.')
 
     # TODO: # 9 - Make a request to get Shop items.
 
