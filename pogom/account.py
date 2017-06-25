@@ -129,8 +129,7 @@ def check_login(args, account, api, position, proxy_url):
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'Get Player request: %s', account['username'], repr(e))
-        raise LoginSequenceFail('%s failed during login sequence.',
-                                account['username'])
+        raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 3 - Download Remote Config Version request.
         old_config = account.get('remote_config', {})
@@ -144,14 +143,12 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings()
         response = request.call()
         total_req += 1
-        parse_get_inventory(account, response)
         parse_download_settings(account, response)
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
-        raise LoginSequenceFail('%s failed during login sequence.',
-                                account['username'])
+        raise LoginSequenceFail('Failed during login sequence.')
 
     # 4 - Get Asset Digest request.
     config = account.get('remote_config', {})
@@ -179,7 +176,6 @@ def check_login(args, account, api, position, proxy_url):
                 request.download_settings(hash=account[
                     'remote_config']['hash'])
                 response = request.call()
-                parse_get_inventory(account, response)
                 parse_new_timestamp_ms(account, response)
                 req_count += 1
                 total_req += 1
@@ -200,8 +196,7 @@ def check_login(args, account, api, position, proxy_url):
             except Exception as e:
                 log.exception('Error while downloading Asset Digest: %s.',
                               repr(e))
-                raise LoginSequenceFail('%s failed during login sequence.',
-                                        account['username'])
+                raise LoginSequenceFail('Failed during login sequence.')
 
     # 5 - Download Item Templates request.
     if config.get('template_time', 0) > old_config.get('template_time', 0):
@@ -245,8 +240,7 @@ def check_login(args, account, api, position, proxy_url):
                 log.exception('Login for account %s failed. Exception in ' +
                               'downloading Item Templates: %s.',
                               account['username'], repr(e))
-                raise LoginSequenceFail('%s failed during login sequence.',
-                                        account['username'])
+                raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
@@ -260,15 +254,13 @@ def check_login(args, account, api, position, proxy_url):
         request.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = request.call()
         total_req += 1
-        parse_get_inventory(account, response)
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.2, .3))
 
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'get_player_profile: %s', account['username'], repr(e))
-        raise LoginSequenceFail('%s failed during login sequence.',
-                                account['username'])
+        raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 7 - Check if there are level up rewards to claim.
         request = api.create_request()
@@ -282,15 +274,13 @@ def check_login(args, account, api, position, proxy_url):
         request.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = request.call()
         total_req += 1
-        parse_get_inventory(account, response)
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.45, .7))
 
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
-        raise LoginSequenceFail('%s failed during login sequence.',
-                                account['username'])
+        raise LoginSequenceFail('Failed during login sequence.')
 
     # TODO: # 8 - Make a request to get Shop items.
 
