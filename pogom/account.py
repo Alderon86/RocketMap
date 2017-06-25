@@ -135,7 +135,7 @@ def check_login(args, account, api, position, proxy_url):
         raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 3 - Download Remote Config Version request.
-        old_config = account['remote_config']
+        old_config = account.get('remote_config', {})
         request = api.create_request()
         request.download_remote_config_version(platform=1,
                                                app_version=app_version)
@@ -522,7 +522,7 @@ def spin_pokestop_request(api, account, fort, step_location):
 
 
 def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
-                              scan_location, response):
+                              scan_location):
     try:
         # Setup encounter request envelope.
         req = api.create_request()
@@ -536,10 +536,10 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        encounter_result = req.call()
+        response = req.call()
         parse_get_inventory(account, response)
 
-        return encounter_result
+        return response
     except Exception as e:
         log.error('Exception while encountering Pokémon: %s.', repr(e))
         return False

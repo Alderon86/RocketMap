@@ -2282,12 +2282,8 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                 # If we didn't get an account, we can't encounter.
                 if hlvl_account:
                     # Logging.
-                    log.debug('Encountering Pokémon ID %s with account %s'
-                              + ' at %s, %s.',
-                              pokemon_id,
-                              hlvl_account['username'],
-                              scan_location[0],
-                              scan_location[1])
+                    log.info('Encountering Pokémon ID {} with account {}'
+                             .format(pokemon_id, hlvl_account['username']))
 
                     # Make new API for this account if we're not using an
                     # API that's already logged in.
@@ -2309,13 +2305,13 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
 
                     # Log in.
                     try:
-                        print "Starting login for encoutner with {}".format(hlvl_account['username'])
                         check_login(args, hlvl_account, hlvl_api,
                                     scan_location, status['proxy_url'])
 
                         # Encounter Pokémon.
                         encounter_result = encounter_pokemon_request(
                             hlvl_api,
+                            hlvl_account,
                             p['encounter_id'],
                             p['spawn_point_id'],
                             scan_location)

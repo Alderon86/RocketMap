@@ -743,7 +743,6 @@ def search_worker_thread(args, account_queue,
 
             # Get an account.
             account = account_queue.get()
-            account['remote_config'] = {}
             status.update(WorkerStatus.get_worker(
                 account['username'], scheduler.scan_location))
             status['message'] = 'Switching to account {}.'.format(
