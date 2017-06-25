@@ -185,10 +185,10 @@ def check_login(args, account, api, position, proxy_url):
                 else:
                     i += 1
                     time.sleep(random.uniform(.3, .5))
-                res = response['responses']['GET_ASSET_DIGEST']
-                result = res['result']
-                page_offset = res['page_offset']
-                page_timestamp = res['timestamp_ms']
+                get_asset_digest = response['responses']['GET_ASSET_DIGEST']
+                result = get_asset_digest.get('result', 0)
+                page_offset = get_asset_digest.get('page_offset', 0)
+                page_timestamp = get_asset_digest.get('timestamp_ms', 0)
                 time.sleep(random.uniform(.53, 1.1))
                 log.debug('Completed %d requests to get asset digest.',
                           req_count)
@@ -229,10 +229,11 @@ def check_login(args, account, api, position, proxy_url):
                     i += 1
                     time.sleep(random.uniform(.3, .5))
 
-                res = response['responses']['DOWNLOAD_ITEM_TEMPLATES']
-                result = res['result']
-                page_offset = res['page_offset']
-                page_timestamp = res['timestamp_ms']
+                download_item_templates = response['responses'][
+                    'DOWNLOAD_ITEM_TEMPLATES']
+                result = download_item_templates.get('result', 0)
+                page_offset = download_item_templates.get('page_offset', 0)
+                page_timestamp = download_item_templates.get('timestamp_ms', 0)
                 log.debug('Completed %d requests to download' +
                           ' item templates.', req_count)
                 time.sleep(random.uniform(.53, 1.1))
