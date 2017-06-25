@@ -536,6 +536,7 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
+        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = req.call()
         parse_get_inventory(account, response)
 

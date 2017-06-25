@@ -532,21 +532,8 @@ function gymLabel(teamName, teamId, gymPoints, latitude, longitude, lastScanned 
                         <b style='color:rgba(${gymColor[teamId]})'>${teamName}</b><br>
                         <img height='70px' style='padding: 5px;' src='static/forts/${teamName}_large.png'>
                     </div>
-                    ${nameStr}
-                    <div>
-                        Location: ${latitude.toFixed(6)}, ${longitude.toFixed(7)}
-                    </div>
-                    <div>
-                        Last Scanned: ${lastScannedStr}
-                    </div>
-                    <div>
-                        Last Modified: ${lastModifiedStr}
-                    </div>
-                    ${directionsStr}
-                </center>
-            </div>`
+                    ${nameStr}`
     } else {
-        var gymLevel = getGymLevel(gymPoints)
         str = `
             <div>
                 <center>
@@ -561,35 +548,21 @@ function gymLabel(teamName, teamId, gymPoints, latitude, longitude, lastScanned 
                         ${nameStr}
                     </div>
                     <div>
-                        Level: ${gymLevel} | Prestige: ${gymPoints}/${gymPrestige[gymLevel - 1] || 50000}
-                    </div>
-                    <div>
                         ${memberStr}
                     </div>
-                    <div>
-                        Location: ${latitude.toFixed(6)}, ${longitude.toFixed(7)}
-                    </div>
-                    <div>
-                        Last Scanned: ${lastScannedStr}
-                    </div>
-                    <div>
-                        Last Modified: ${lastModifiedStr}
-                    </div>
-                    ${directionsStr}`
+                    <br>`
     }
 
     if (raid !== null && raid['battle'] > Date.now()) {
         var nextRaidStr = getDateStr(raid['battle'])
         str += `
-                    <br>
-                    <div>
-                        Raid Start: ${nextRaidStr}
-                    </div>
                     <div>
                         Level: ${raid['level']}
                     </div>
-                </center>
-            </div>`
+                    <div>
+                        Raid Start: ${nextRaidStr}
+                    </div>
+                    <br>`
     } else if (raid !== null && raid['battle'] < Date.now() && raid['end'] > Date.now() && raid['pokemon_id'] !== null ) {
         var raidEndsStr = getDateStr(raid['end'])
         var types = raid['pokemon_types']
@@ -602,10 +575,6 @@ function gymLabel(teamName, teamId, gymPoints, latitude, longitude, lastScanned 
         })
 
         str += `
-                    <br>
-                    <div>
-                        Raid End: ${raidEndsStr}
-                    </div>
                     <div>
                         Level: ${raid['level']}
                     </div>
@@ -624,13 +593,25 @@ function gymLabel(teamName, teamId, gymPoints, latitude, longitude, lastScanned 
                     <div>
                         Moves: ${pMove1} / ${pMove2}
                     </div>
-                </center>
-            </div>`
-    } else {
-        str += `
-                </center>
-            </div>`
+                    <div>
+                        Raid End: ${raidEndsStr}
+                    </div>
+                    <br>`
     }
+
+    str += `
+                    <div>
+                        Location: ${latitude.toFixed(6)}, ${longitude.toFixed(7)}
+                    </div>
+                    <div>
+                        Last Scanned: ${lastScannedStr}
+                    </div>
+                    <div>
+                        Last Modified: ${lastModifiedStr}
+                    </div>
+                    ${directionsStr}
+                </center>
+            </div>`
 
     return str
 }
@@ -915,7 +896,7 @@ function setupGymMarker(item) {
             },
             map: map,
             icon: {
-                url: 'static/forts/' + Store.get('gymMarkerStyle') + '/' + gymTypes[item['team_id']] + (item['team_id'] !== 0 ? '_' + getGymLevel(item['gym_points']) : '') + '.png',
+                url: 'static/forts/' + Store.get('gymMarkerStyle') + '/' + gymTypes[item['team_id']] + '.png',
                 scaledSize: new google.maps.Size(48, 48)
             }
         })
@@ -977,7 +958,7 @@ function updateGymMarker(item, marker) {
         })
     } else {
         marker.setIcon({
-            url: 'static/forts/' + Store.get('gymMarkerStyle') + '/' + gymTypes[item['team_id']] + (item['team_id'] !== 0 ? '_' + getGymLevel(item['gym_points']) : '') + '.png',
+            url: 'static/forts/' + Store.get('gymMarkerStyle') + '/' + gymTypes[item['team_id']] + '.png',
             scaledSize: new google.maps.Size(48, 48)
         })
     }
@@ -988,7 +969,7 @@ function updateGymMarker(item, marker) {
 function updateGymIcons() {
     $.each(mapData.gyms, function (key, value) {
         mapData.gyms[key]['marker'].setIcon({
-            url: 'static/forts/' + Store.get('gymMarkerStyle') + '/' + gymTypes[mapData.gyms[key]['team_id']] + (mapData.gyms[key]['team_id'] !== 0 ? '_' + getGymLevel(mapData.gyms[key]['gym_points']) : '') + '.png',
+            url: 'static/forts/' + Store.get('gymMarkerStyle') + '/' + gymTypes[mapData.gyms[key]['team_id']] + '.png',
             scaledSize: new google.maps.Size(48, 48)
         })
     })
