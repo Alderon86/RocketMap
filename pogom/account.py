@@ -21,6 +21,10 @@ class TooManyLoginAttempts(Exception):
     pass
 
 
+class LoginSequenceFail(Exception):
+    pass
+
+
 # Create the API object that'll be used to scan.
 def setup_api(args, status, account):
     # Create the API instance this will use.
@@ -110,7 +114,7 @@ def check_login(args, account, api, position, proxy_url):
         log.exception('Login for account %s failed.' +
                       ' Exception in call request: %s', account['username'],
                       repr(e))
-        return False
+        raise LoginSequenceFail('Failed during login sequence.')
 
     try:  # 2 - Get Player request.
         req = api.create_request()
@@ -125,10 +129,11 @@ def check_login(args, account, api, position, proxy_url):
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'Get Player request: %s', account['username'], repr(e))
-        return False
+        raise LoginSequenceFail('%s failed during login sequence.',
+                                account['username'])
 
     try:  # 3 - Download Remote Config Version request.
-        old_config = account['remote_config']
+        old_config = account.get('remote_config', {})
         request = api.create_request()
         request.download_remote_config_version(platform=1,
                                                app_version=app_version)
@@ -139,16 +144,18 @@ def check_login(args, account, api, position, proxy_url):
         request.download_settings()
         response = request.call()
         total_req += 1
+        parse_get_inventory(account, response)
         parse_download_settings(account, response)
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.53, 1.1))
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', repr(e))
-        return False
+        raise LoginSequenceFail('%s failed during login sequence.',
+                                account['username'])
 
     # 4 - Get Asset Digest request.
-    config = account['remote_config']
-    if config['asset_time'] > old_config.get('asset_time', 0):
+    config = account.get('remote_config', {})
+    if config.get('asset_time', 0) > old_config.get('asset_time', 0):
         i = random.randint(0, 3)
         req_count = 0
         result = 2
@@ -172,6 +179,7 @@ def check_login(args, account, api, position, proxy_url):
                 request.download_settings(hash=account[
                     'remote_config']['hash'])
                 response = request.call()
+                parse_get_inventory(account, response)
                 parse_new_timestamp_ms(account, response)
                 req_count += 1
                 total_req += 1
@@ -181,9 +189,10 @@ def check_login(args, account, api, position, proxy_url):
                 else:
                     i += 1
                     time.sleep(random.uniform(.3, .5))
-                result = response['responses']['GET_ASSET_DIGEST']
-                page_offset = result['page_offset']
-                page_timestamp = result['timestamp_ms']
+                res = response['responses']['GET_ASSET_DIGEST']
+                result = res['result']
+                page_offset = res['page_offset']
+                page_timestamp = res['timestamp_ms']
                 time.sleep(random.uniform(.53, 1.1))
                 log.debug('Completed %d requests to get asset digest.',
                           req_count)
@@ -191,10 +200,11 @@ def check_login(args, account, api, position, proxy_url):
             except Exception as e:
                 log.exception('Error while downloading Asset Digest: %s.',
                               repr(e))
-                return False
+                raise LoginSequenceFail('%s failed during login sequence.',
+                                        account['username'])
 
     # 5 - Download Item Templates request.
-    if config['template_time'] > old_config.get('template_time', 0):
+    if config.get('template_time', 0) > old_config.get('template_time', 0):
         i = random.randint(0, 3)
         req_count = 0
         result = 2
@@ -224,9 +234,10 @@ def check_login(args, account, api, position, proxy_url):
                     i += 1
                     time.sleep(random.uniform(.3, .5))
 
-                result = response['responses']['DOWNLOAD_ITEM_TEMPLATES']
-                page_offset = result['page_offset']
-                page_timestamp = result['timestamp_ms']
+                res = response['responses']['DOWNLOAD_ITEM_TEMPLATES']
+                result = res['result']
+                page_offset = res['page_offset']
+                page_timestamp = res['timestamp_ms']
                 log.debug('Completed %d requests to download' +
                           ' item templates.', req_count)
                 time.sleep(random.uniform(.53, 1.1))
@@ -234,7 +245,8 @@ def check_login(args, account, api, position, proxy_url):
                 log.exception('Login for account %s failed. Exception in ' +
                               'downloading Item Templates: %s.',
                               account['username'], repr(e))
-                return False
+                raise LoginSequenceFail('%s failed during login sequence.',
+                                        account['username'])
 
     try:  # 6 - Get Player Profile request.
         request = api.create_request()
@@ -245,15 +257,18 @@ def check_login(args, account, api, position, proxy_url):
         request.check_awarded_badges()
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
+        request.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = request.call()
         total_req += 1
+        parse_get_inventory(account, response)
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.2, .3))
 
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'get_player_profile: %s', account['username'], repr(e))
-        return False
+        raise LoginSequenceFail('%s failed during login sequence.',
+                                account['username'])
 
     try:  # 7 - Check if there are level up rewards to claim.
         request = api.create_request()
@@ -264,36 +279,20 @@ def check_login(args, account, api, position, proxy_url):
         request.check_awarded_badges()
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
+        request.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = request.call()
         total_req += 1
+        parse_get_inventory(account, response)
         parse_new_timestamp_ms(account, response)
         time.sleep(random.uniform(.45, .7))
 
     except Exception as e:
         log.exception('Login for account %s failed. Exception in ' +
                       'level_up_rewards: %s', account['username'], repr(e))
-        return False
+        raise LoginSequenceFail('%s failed during login sequence.',
+                                account['username'])
 
-    try:  # 8 - Register Background Device request.
-        request = api.create_request()
-        request.register_background_device(device_type='apple_watch')
-        request.check_challenge()
-        request.get_hatched_eggs()
-        request.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
-        request.check_awarded_badges()
-        request.download_settings(hash=account['remote_config']['hash'])
-        request.get_buddy_walked()
-        response = request.call()
-        total_req += 1
-        parse_new_timestamp_ms(account, response)
-        time.sleep(random.uniform(.53, 1.1))
-
-    except Exception as e:
-        log.exception('Login for account %s failed. Exception in ' +
-                      'Background Device: %s', account['username'], repr(e))
-        return False
-
-    # TODO: # 9 - Make a request to get Shop items.
+    # TODO: # 8 - Make a request to get Shop items.
 
     log.debug('Login for account %s with %s requests successful.',
               account['username'], total_req)
@@ -532,6 +531,7 @@ def spin_pokestop_request(api, account, fort, step_location):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
+        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = req.call()
         parse_new_timestamp_ms(account, response)
 
@@ -543,7 +543,7 @@ def spin_pokestop_request(api, account, fort, step_location):
 
 
 def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
-                              scan_location, response):
+                              scan_location):
     try:
         # Setup encounter request envelope.
         req = api.create_request()
@@ -557,10 +557,11 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        encounter_result = req.call()
+        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
+        response = req.call()
         parse_new_timestamp_ms(account, response)
 
-        return encounter_result
+        return response
     except Exception as e:
         log.error('Exception while encountering Pokémon: %s.', repr(e))
         return False

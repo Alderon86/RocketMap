@@ -782,7 +782,6 @@ def search_worker_thread(args, account_queue, account_sets,
 
             # Get an account.
             account = account_queue.get()
-            account['remote_config'] = {}
             status.update(WorkerStatus.get_worker(
                 account['username'], scheduler.scan_location))
             status['message'] = 'Switching to account {}.'.format(
@@ -1211,6 +1210,7 @@ def map_request(api, account, position, no_jitter=False):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
+        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = req.call()
 
         response = clear_dict_response(response, True)
@@ -1244,6 +1244,7 @@ def gym_request(api, account, position, gym, api_version):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
+        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = req.call()
 
         parse_new_timestamp_ms(account, response)
