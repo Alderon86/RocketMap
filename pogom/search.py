@@ -1087,7 +1087,7 @@ def search_worker_thread(args, account_queue,
                         # Can only get gym details within 450m of our position.
                         distance = calc_distance(
                             step_location, [gym['latitude'], gym['longitude']])
-                        if distance < 0.45:
+                        if distance < 1.0:
                             # Check if we already have details on this gym.
                             # Get them if not.
                             try:
@@ -1137,7 +1137,7 @@ def search_worker_thread(args, account_queue,
                             # API gets cranky about gyms that are ALMOST 1km
                             # away.)
                             if response['responses'][
-                                    'GET_GYM_DETAILS']['result'] == 2:
+                                    'GYM_GET_INFO']['result'] == 2:
                                 log.warning(
                                     ('Gym @ %f/%f is out of range (%dkm), ' +
                                      'skipping.'),
@@ -1145,7 +1145,7 @@ def search_worker_thread(args, account_queue,
                                     distance)
                             else:
                                 gym_responses[gym['gym_id']] = response[
-                                    'responses']['GET_GYM_DETAILS']
+                                    'responses']['GYM_GET_INFO']
                             del response
                             # Increment which gym we're on for status messages.
                             current_gym += 1
@@ -1284,21 +1284,21 @@ def map_request(api, account, position, no_jitter=False):
 def gym_request(api, account, position, gym, api_version):
     time.sleep(random.uniform(10, 20))
     try:
-        log.debug('Getting details for gym @ %f/%f (%fkm away).',
+        log.info('Getting details for gym %s @ %f/%f (%fkm away).', gym['gym_id'],
                   gym['latitude'], gym['longitude'],
                   calc_distance(position, [gym['latitude'], gym['longitude']]))
         req = api.create_request()
-        req.get_gym_details(gym_id=gym['gym_id'],
-                            player_latitude=f2i(position[0]),
-                            player_longitude=f2i(position[1]),
-                            gym_latitude=gym['latitude'],
-                            gym_longitude=gym['longitude'],
-                            client_version=api_version)
+        req.gym_get_info(gym_id=gym['gym_id'],
+                         player_lat_degrees=f2i(position[0]),
+                         player_lng_degrees=f2i(position[1]),
+                         gym_lat_degrees=gym['latitude'],
+                         gym_lng_degrees=gym['longitude'])
         req.check_challenge()
         req.get_hatched_eggs()
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
+        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
         response = req.call()
 
         parse_get_inventory(account, response)
