@@ -10,6 +10,7 @@ import gc
 import time
 import geopy
 import math
+
 from peewee import (InsertQuery, Check, CompositeKey, ForeignKeyField,
                     SmallIntegerField, IntegerField, CharField, DoubleField,
                     BooleanField, DateTimeField, fn, DeleteQuery, FloatField,
@@ -33,8 +34,10 @@ from .utils import (get_pokemon_name, get_pokemon_rarity, get_pokemon_types,
 from .transform import transform_from_wgs_to_gcj, get_new_coords
 from .customLog import printPokemon
 
-from .account import (tutorial_pokestop_spin, check_login,
-                      setup_api, encounter_pokemon_request)
+
+from .account import (tutorial_pokestop_spin, get_player_level, check_login,
+                      setup_api, encounter_pokemon_request, pokestop_spinnable,
+                      spinning_try)
 
 log = logging.getLogger(__name__)
 
@@ -1795,10 +1798,6 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
     # Use separate level indicator for our L30 encounters.
     encounter_level = level
 
-    # Helping out the GC.
-    if 'GET_INVENTORY' in map_dict['responses']:
-        del map_dict['responses']['GET_INVENTORY']
-
     for i, cell in enumerate(cells):
         # If we have map responses then use the time from the request
         if i == 0:
@@ -2161,7 +2160,7 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                      datetime(1970, 1, 1)).total_seconds())) for f in query]
 
         # Complete tutorial with a Pokestop spin
-        if args.complete_tutorial and not (len(captcha_url) > 1):
+        if (args.complete_tutorial and not args.pokestop_spinning):
             if config['parse_pokestops']:
                 tutorial_pokestop_spin(
                     api, level, forts, step_location, account)
@@ -2212,8 +2211,14 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                         'active_fort_modifier': active_fort_modifier
                     }))
 
-                if ((f['id'], int(f['last_modified_timestamp_ms'] / 1000.0))
-                        in encountered_pokestops):
+                # Spin Pokestop with 50% chance.
+                if args.pokestop_spinning and pokestop_spinnable(
+                        f, step_location):
+                    spinning_try(api, f, step_location, account, map_dict,
+                                 args)
+
+                if ((f['id'], int(f['last_modified_timestamp_ms'] / 1000.0) in
+                     encountered_pokestops)) and not args.pokestop_spinning:
                     # If pokestop has been encountered before and hasn't
                     # changed don't process it.
                     stopsskipped += 1
@@ -2261,6 +2266,8 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                 }
 
         # Helping out the GC.
+        if 'GET_INVENTORY' in map_dict['responses']:
+            del map_dict['responses']['GET_INVENTORY']
         del forts
 
     log.info('Parsing found Pokemon: %d, nearby: %d, pokestops: %d, gyms: %d.',
