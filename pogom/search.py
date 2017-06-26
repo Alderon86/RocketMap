@@ -1263,7 +1263,9 @@ def map_request(api, account, position, no_jitter=False):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
+        req.get_inbox(is_history=True,
+                      is_reverse=False,
+                      not_before_ms=0)
         response = req.call()
 
         response = clear_dict_response(response, True)
@@ -1297,7 +1299,9 @@ def gym_request(api, account, position, gym, api_version):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        req.get_inbox(not_before_ms=account['last_timestamp_ms'])
+        req.get_inbox(is_history=True,
+                      is_reverse=False,
+                      not_before_ms=0)
         response = req.call()
 
         parse_get_inventory(account, response)
