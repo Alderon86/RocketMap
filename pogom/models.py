@@ -2724,11 +2724,11 @@ def parse_gyms(args, gym_responses, wh_update_queue, db_update_queue):
         if args.webhooks:
             webhook_data = {
                 'id': b64encode(str(gym_id)),
-                'latitude': gym_state['fort_data']['latitude'],
-                'longitude': gym_state['fort_data']['longitude'],
-                'team': gym_state['fort_data'].get('owned_by_team', 0),
+                'latitude': gym_state['pokemon_fort_proto']['latitude'],
+                'longitude': gym_state['pokemon_fort_proto']['longitude'],
+                'team': gym_state['pokemon_fort_proto'].get('owned_by_team', 0),
                 'name': g['name'],
-                'url': g['urls'][0],
+                'url': g['url'],
                 'pokemon': [],
             }
 
@@ -2764,33 +2764,33 @@ def parse_gyms(args, gym_responses, wh_update_queue, db_update_queue):
 
             trainers[i] = {
                 'name': member['trainer_public_profile']['name'],
-                'team': member['trainer_public_profile']['team_color'],
+                'team': member['trainer_public_profile'].get('team_color', 0),
                 'level': member['trainer_public_profile']['level'],
                 'last_seen': datetime.utcnow(),
             }
 
             if args.webhooks:
                 webhook_data['pokemon'].append({
-                    'pokemon_uid': member['pokemon_data']['id'],
-                    'pokemon_id': member['pokemon_data']['pokemon_id'],
-                    'cp': member['pokemon_data']['cp'],
-                    'num_upgrades': member['pokemon_data'].get(
+                    'pokemon_uid': member['motivated_pokemon']['pokemon']['id'],
+                    'pokemon_id': member['motivated_pokemon']['pokemon']['pokemon_id'],
+                    'cp': member['motivated_pokemon']['pokemon']['cp'],
+                    'num_upgrades': member['motivated_pokemon']['pokemon'].get(
                         'num_upgrades', 0),
-                    'move_1': member['pokemon_data'].get('move_1'),
-                    'move_2': member['pokemon_data'].get('move_2'),
-                    'height': member['pokemon_data'].get('height_m'),
-                    'weight': member['pokemon_data'].get('weight_kg'),
-                    'stamina': member['pokemon_data'].get('stamina'),
-                    'stamina_max': member['pokemon_data'].get('stamina_max'),
-                    'cp_multiplier': member['pokemon_data'].get(
+                    'move_1': member['motivated_pokemon']['pokemon'].get('move_1'),
+                    'move_2': member['motivated_pokemon']['pokemon'].get('move_2'),
+                    'height': member['motivated_pokemon']['pokemon'].get('height_m'),
+                    'weight': member['motivated_pokemon']['pokemon'].get('weight_kg'),
+                    'stamina': member['motivated_pokemon']['pokemon'].get('stamina'),
+                    'stamina_max': member['motivated_pokemon']['pokemon'].get('stamina_max'),
+                    'cp_multiplier': member['motivated_pokemon']['pokemon'].get(
                         'cp_multiplier'),
-                    'additional_cp_multiplier': member['pokemon_data'].get(
+                    'additional_cp_multiplier': member['motivated_pokemon']['pokemon'].get(
                         'additional_cp_multiplier', 0),
-                    'iv_defense': member['pokemon_data'].get(
+                    'iv_defense': member['motivated_pokemon']['pokemon'].get(
                         'individual_defense', 0),
-                    'iv_stamina': member['pokemon_data'].get(
+                    'iv_stamina': member['motivated_pokemon']['pokemon'].get(
                         'individual_stamina', 0),
-                    'iv_attack': member['pokemon_data'].get(
+                    'iv_attack': member['motivated_pokemon']['pokemon'].get(
                         'individual_attack', 0),
                     'trainer_name': member['trainer_public_profile']['name'],
                     'trainer_level': member['trainer_public_profile']['level'],
