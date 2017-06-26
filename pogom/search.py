@@ -1135,7 +1135,9 @@ def search_worker_thread(args, account_queue,
                             # Make sure the gym was in range. (Sometimes the
                             # API gets cranky about gyms that are ALMOST 1km
                             # away.)
-                            if response['responses']['GYM_GET_INFO'].get('result', 0) == 1:
+                            if (response['responses']
+                                    .get('GYM_GET_INFO', {})
+                                    .get('result', False)):
                                 gym_responses[gym['gym_id']] = response[
                                     'responses']['GYM_GET_INFO']
                             del response
@@ -1278,9 +1280,9 @@ def map_request(api, account, position, no_jitter=False):
 def gym_request(api, account, position, gym, api_version):
     time.sleep(random.uniform(10, 20))
     try:
-        log.info('Getting details for gym %s @ %f/%f (%fkm away).', gym['gym_id'],
-                  gym['latitude'], gym['longitude'],
-                  calc_distance(position, [gym['latitude'], gym['longitude']]))
+        log.info('Getting details for gym %s @ %f/%f (%fkm away).',
+                 gym['gym_id'], gym['latitude'], gym['longitude'],
+                 calc_distance(position, [gym['latitude'], gym['longitude']]))
         req = api.create_request()
         req.gym_get_info(gym_id=gym['gym_id'],
                          player_lat_degrees=f2i(position[0]),

@@ -880,7 +880,6 @@ class Gym(BaseModel):
             for d in details:
                 gyms[d['gym_id']]['name'] = d['name']
 
-
             raids = (Raid
                      .select(
                          Raid.gym_id,
@@ -969,6 +968,7 @@ class Gym(BaseModel):
 
         return result
 
+
 class Raid(BaseModel):
     gym_id = Utf8mb4CharField(primary_key=True, max_length=50)
     level = IntegerField(index=True)
@@ -980,6 +980,7 @@ class Raid(BaseModel):
     move_1 = SmallIntegerField(null=True)
     move_2 = SmallIntegerField(null=True)
     last_scanned = DateTimeField(default=datetime.utcnow, index=True)
+
 
 class LocationAltitude(BaseModel):
     cellid = Utf8mb4CharField(primary_key=True, max_length=50)
@@ -2071,7 +2072,6 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                   72, 74, 77, 81, 98, 118, 120, 129, 161, 165, 167,
                   177, 183, 187, 191, 194, 198, 209, 218]
 
-
     # Consolidate the individual lists in each cell into two lists of Pokemon
     # and a list of forts.
     cells = map_dict['responses']['GET_MAP_OBJECTS']['map_cells']
@@ -2317,7 +2317,8 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                             scan_location)
                     except Exception as e:
                         log.exception('Exception in encountering with account '
-                                  '%s: %s',hlvl_account['username'], repr(e))
+                                      '%s: %s',
+                                      hlvl_account['username'], repr(e))
                         Account.set_fail(hlvl_account)
 
                     # We don't want to tie an hlvl_account to an instance
@@ -2601,9 +2602,9 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                             'gym_id': b64encode(str(raids[f['id']]['gym_id'])),
                             'latitude': f['latitude'],
                             'longitude': f['longitude'],
-                            'level': raid_info['raid_level'],
-                            'spawn': raid_info['raid_spawn_ms'],
-                            'battle': raid_info['raid_battle_ms'],
+                            'level': raid_info['raid_level'] / 1000,
+                            'spawn': raid_info['raid_spawn_ms'] / 1000,
+                            'battle': raid_info['raid_battle_ms'] / 1000,
                             'end': raid_info['raid_end_ms'],
                             'pokemon_id': raid_info.get('pokemon_id', 0),
                             'cp': raid_info.get('pokemon_id', 0),
@@ -2614,7 +2615,8 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
         # Helping out the GC.
         del forts
 
-    log.info('Parsing found Pokemon: %d, nearby: %d, pokestops: %d, gyms: %d, raids: %d.',
+    log.info('Parsing found Pokemon: %d, nearby: %d, pokestops: %d, ' +
+             'gyms: %d, raids: %d.',
              len(pokemon) + skipped,
              nearby_pokemon_count,
              len(pokestops) + stopsskipped,
@@ -2726,7 +2728,8 @@ def parse_gyms(args, gym_responses, wh_update_queue, db_update_queue):
                 'id': b64encode(str(gym_id)),
                 'latitude': gym_state['pokemon_fort_proto']['latitude'],
                 'longitude': gym_state['pokemon_fort_proto']['longitude'],
-                'team': gym_state['pokemon_fort_proto'].get('owned_by_team', 0),
+                'team': gym_state['pokemon_fort_proto'].get(
+                    'owned_by_team', 0),
                 'name': g['name'],
                 'url': g['url'],
                 'pokemon': [],
@@ -2735,24 +2738,33 @@ def parse_gyms(args, gym_responses, wh_update_queue, db_update_queue):
         for member in gym_state.get('gym_defender', []):
             gym_members[i] = {
                 'gym_id': gym_id,
-                'pokemon_uid': member['motivated_pokemon']['pokemon']['pokemon_id'],
+                'pokemon_uid': member['motivated_pokemon']['pokemon'][
+                    'pokemon_id'],
             }
 
             gym_pokemon[i] = {
                 'pokemon_uid': member['motivated_pokemon']['pokemon']['id'],
-                'pokemon_id': member['motivated_pokemon']['pokemon']['pokemon_id'],
+                'pokemon_id': member['motivated_pokemon']['pokemon'][
+                    'pokemon_id'],
                 'cp': member['motivated_pokemon']['cp_now'],
-                'trainer_name': member['motivated_pokemon']['pokemon']['owner_name'],
-                'num_upgrades': member['motivated_pokemon']['pokemon'].get('num_upgrades', 0),
+                'trainer_name': member['motivated_pokemon']['pokemon'][
+                    'owner_name'],
+                'num_upgrades': member['motivated_pokemon']['pokemon'].get(
+                    'num_upgrades', 0),
                 'move_1': member['motivated_pokemon']['pokemon'].get('move_1'),
                 'move_2': member['motivated_pokemon']['pokemon'].get('move_2'),
-                'height': member['motivated_pokemon']['pokemon'].get('height_m'),
-                'weight': member['motivated_pokemon']['pokemon'].get('weight_kg'),
-                'stamina': member['motivated_pokemon']['pokemon'].get('stamina'),
-                'stamina_max': member['motivated_pokemon']['pokemon'].get('stamina_max'),
-                'cp_multiplier': member['motivated_pokemon']['pokemon'].get('cp_multiplier'),
-                'additional_cp_multiplier': member['motivated_pokemon']['pokemon'].get(
-                    'additional_cp_multiplier', 0),
+                'height': member['motivated_pokemon']['pokemon'].get(
+                    'height_m'),
+                'weight': member['motivated_pokemon']['pokemon'].get(
+                    'weight_kg'),
+                'stamina': member['motivated_pokemon']['pokemon'].get(
+                    'stamina'),
+                'stamina_max': member['motivated_pokemon']['pokemon'].get(
+                    'stamina_max'),
+                'cp_multiplier': member['motivated_pokemon']['pokemon'].get(
+                    'cp_multiplier'),
+                'additional_cp_multiplier': member['motivated_pokemon'][
+                    'pokemon'].get('additional_cp_multiplier', 0),
                 'iv_defense': member['motivated_pokemon']['pokemon'].get(
                     'individual_defense', 0),
                 'iv_stamina': member['motivated_pokemon']['pokemon'].get(
@@ -2771,20 +2783,30 @@ def parse_gyms(args, gym_responses, wh_update_queue, db_update_queue):
 
             if args.webhooks:
                 webhook_data['pokemon'].append({
-                    'pokemon_uid': member['motivated_pokemon']['pokemon']['id'],
-                    'pokemon_id': member['motivated_pokemon']['pokemon']['pokemon_id'],
+                    'pokemon_uid': member['motivated_pokemon']['pokemon'][
+                        'id'],
+                    'pokemon_id': member['motivated_pokemon']['pokemon'][
+                        'pokemon_id'],
                     'cp': member['motivated_pokemon']['pokemon']['cp'],
                     'num_upgrades': member['motivated_pokemon']['pokemon'].get(
                         'num_upgrades', 0),
-                    'move_1': member['motivated_pokemon']['pokemon'].get('move_1'),
-                    'move_2': member['motivated_pokemon']['pokemon'].get('move_2'),
-                    'height': member['motivated_pokemon']['pokemon'].get('height_m'),
-                    'weight': member['motivated_pokemon']['pokemon'].get('weight_kg'),
-                    'stamina': member['motivated_pokemon']['pokemon'].get('stamina'),
-                    'stamina_max': member['motivated_pokemon']['pokemon'].get('stamina_max'),
-                    'cp_multiplier': member['motivated_pokemon']['pokemon'].get(
+                    'move_1': member['motivated_pokemon']['pokemon'].get(
+                        'move_1'),
+                    'move_2': member['motivated_pokemon']['pokemon'].get(
+                        'move_2'),
+                    'height': member['motivated_pokemon']['pokemon'].get(
+                        'height_m'),
+                    'weight': member['motivated_pokemon']['pokemon'].get(
+                        'weight_kg'),
+                    'stamina': member['motivated_pokemon']['pokemon'].get(
+                        'stamina'),
+                    'stamina_max': member['motivated_pokemon']['pokemon'].get(
+                        'stamina_max'),
+                    'cp_multiplier': member['motivated_pokemon'][
+                        'pokemon'].get(
                         'cp_multiplier'),
-                    'additional_cp_multiplier': member['motivated_pokemon']['pokemon'].get(
+                    'additional_cp_multiplier': member['motivated_pokemon'][
+                        'pokemon'].get(
                         'additional_cp_multiplier', 0),
                     'iv_defense': member['motivated_pokemon']['pokemon'].get(
                         'individual_defense', 0),
@@ -3028,10 +3050,10 @@ def bulk_upsert(cls, data, db):
 
 def create_tables(db):
     db.connect()
-    tables = [Account, Pokemon, Pokestop, Gym, Raid, ScannedLocation, GymDetails,
-              GymMember, GymPokemon, Trainer, MainWorker, WorkerStatus,
-              SpawnPoint, ScanSpawnPoint, SpawnpointDetectionData,
-              Token, LocationAltitude, HashKeys]
+    tables = [Account, Pokemon, Pokestop, Gym, Raid, ScannedLocation,
+              GymDetails,  GymMember, GymPokemon, Trainer, MainWorker,
+              WorkerStatus, SpawnPoint, ScanSpawnPoint,
+              SpawnpointDetectionData, Token, LocationAltitude, HashKeys]
     for table in tables:
         if not table.table_exists():
             log.info('Creating table: %s', table.__name__)
@@ -3042,8 +3064,8 @@ def create_tables(db):
 
 
 def drop_tables(db):
-    tables = [Account,  Pokemon, Pokestop, Gym, Raid, ScannedLocation, Versions,
-              GymDetails, GymMember, GymPokemon, Trainer, MainWorker,
+    tables = [Account,  Pokemon, Pokestop, Gym, Raid, ScannedLocation,
+              Versions, GymDetails, GymMember, GymPokemon, Trainer, MainWorker,
               WorkerStatus, SpawnPoint, ScanSpawnPoint,
               SpawnpointDetectionData, LocationAltitude,
               Token, HashKeys]
