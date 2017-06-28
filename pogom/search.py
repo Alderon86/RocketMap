@@ -835,7 +835,7 @@ def search_worker_thread(args, account_queue,
                     account_failures.append({'account': account,
                                              'last_fail_time': now(),
                                              'reason': 'shadowban'})
-                    Account.set_fail(account)
+                    Account.set_free(account)
                     acc = Account.get_accounts(1, max_level=29)
                     if acc:
                         account_queue.put(acc.pop())
