@@ -2598,19 +2598,21 @@ def parse_map(args, map_dict, step_location, db_update_queue, wh_update_queue,
                         })
 
                     if args.webhooks and not args.webhook_updates_only:
-                        wh_update_queue.put(('raid', {
+                        wh_raid = {
                             'gym_id': b64encode(str(raids[f['id']]['gym_id'])),
                             'latitude': f['latitude'],
                             'longitude': f['longitude'],
-                            'level': raid_info['raid_level'] / 1000,
+                            'level': raid_info['raid_level'],
                             'spawn': raid_info['raid_spawn_ms'] / 1000,
                             'battle': raid_info['raid_battle_ms'] / 1000,
-                            'end': raid_info['raid_end_ms'],
-                            'pokemon_id': raid_info.get('pokemon_id', 0),
-                            'cp': raid_info.get('pokemon_id', 0),
-                            'move_1': raid_info.get('pokemon_id', 0),
-                            'move_2': raid_info.get('pokemon_id', 0)
-                        }))
+                            'end': raid_info['raid_end_ms'] / 1000,
+                            'pokemon_id': raid_pokemon.get('pokemon_id', 0),
+                            'cp': raid_pokemon.get('cp', 0),
+                            'move_1': raid_pokemon.get('move_1', 0),
+                            'move_2': raid_pokemon.get('move_2', 0)
+                        }
+
+                        wh_update_queue.put(('raid', wh_raid))
 
         # Helping out the GC.
         del forts
