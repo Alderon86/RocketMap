@@ -326,21 +326,8 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
     they can be tried again later, but must wait a bit before doing do so
     to prevent accounts from being cycled through too quickly.
     '''
-    while account_queue.empty():
-        args.accounts = Account.get_accounts(args.workers, init=True,
-                                             max_level=29)
-        for a in args.accounts:
-            account_queue.put(a)
-
-        if account_queue.qsize() < args.workers:
-            log.warning('Found {} of {} requested accounts'
-                        .format(account_queue.qsize(), args.workers))
-
-        if account_queue.empty():
-            log.error('Failed to get enough accounts. Retrying in 5 s...')
-            time.sleep(5)
-
-    log.info('Loaded {} accounts from the DB.'.format(account_queue.qsize()))
+    add_accounts_to_queue(args, account_queue, args.workers,
+                          max_level=29, init=True)
 
     # Create a list for failed accounts.
     account_failures = []
@@ -793,9 +780,7 @@ def search_worker_thread(args, account_queue,
                                              'reason': 'failures'})
                     Account.set_fail(account)
 
-                    acc = Account.get_accounts(1, max_level=29)
-                    if acc:
-                        account_queue.put(acc.pop())
+                    add_accounts_to_queue(args, account_queue, 1, max_level=29)
 
                     # Exit this loop to get a new account and have the API
                     # recreated.
@@ -815,9 +800,7 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': now(),
                                              'reason': 'empty scans'})
                     Account.set_fail(account)
-                    acc = Account.get_accounts(1, max_level=29)
-                    if acc:
-                        account_queue.put(acc.pop())
+                    add_accounts_to_queue(args, account_queue, 1, max_level=29)
 
                     # Exit this loop to get a new account and have the API
                     # recreated.
@@ -836,9 +819,7 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': now(),
                                              'reason': 'shadowban'})
                     Account.set_free(account)
-                    acc = Account.get_accounts(1, max_level=29)
-                    if acc:
-                        account_queue.put(acc.pop())
+                    add_accounts_to_queue(args, account_queue, 1, max_level=29)
 
                     # Exit this loop to get a new account and have the API
                     # recreated.
@@ -870,9 +851,8 @@ def search_worker_thread(args, account_queue,
                         account_failures.append({'account': account,
                                                  'last_fail_time': now(),
                                                  'reason': 'rest interval'})
-                        acc = Account.get_accounts(1, max_level=29)
-                        if acc:
-                            account_queue.put(acc.pop())
+                        add_accounts_to_queue(args, account_queue, 1,
+                                              max_level=29)
 
                         break
 
@@ -999,9 +979,8 @@ def search_worker_thread(args, account_queue,
                                              response_dict, step_location)
                     if captcha is not None:
                         account_queue.task_done()
-                        acc = Account.get_accounts(1, max_level=29)
-                        if acc:
-                            account_queue.put(acc.pop())
+                        add_accounts_to_queue(args, account_queue, 1,
+                                              max_level=29)
 
                         time.sleep(3)
                         break
@@ -1054,9 +1033,7 @@ def search_worker_thread(args, account_queue,
                                              'last_fail_time': sb_time,
                                              'reason': 'shadowban'})
                     Account.set_shadowban(account)
-                    acc = Account.get_accounts(1, max_level=29)
-                    if acc:
-                        account_queue.put(acc.pop())
+                    add_accounts_to_queue(args, account_queue, 1, max_level=29)
 
                     # Exit this loop to get a new account and have the API
                     # recreated.
@@ -1213,9 +1190,7 @@ def search_worker_thread(args, account_queue,
                                      'last_fail_time': now(),
                                      'reason': 'exception'})
             Account.set_fail(account)
-            acc = Account.get_accounts(1, max_level=29)
-            if acc:
-                account_queue.put(acc.pop())
+            add_accounts_to_queue(args, account_queue, 1, max_level=29)
 
             time.sleep(args.scan_delay)
 
@@ -1420,3 +1395,23 @@ def get_api_version(args):
     except Exception as e:
         log.warning('error on API check: %s', repr(e))
         return False
+
+
+def add_accounts_to_queue(args, account_queue, number,
+                          min_level=1, max_level=40, init=False):
+    accounts = []
+    while len(accounts) < number:
+        accounts = Account.get_accounts((number - len(accounts)),
+                                        min_level=min_level,
+                                        max_level=max_level,
+                                        init=init)
+        for a in accounts:
+            account_queue.put(a)
+
+        if len(accounts) < number:
+            log.error('Got only {} / {} accounts. Retrying in {} s.',
+                      len(accounts), number, args.login_delay)
+            time.sleep(args.login_delay)
+
+    log.info('Loaded {} accounts from the DB.'.format(number))
+    return account_queue

@@ -270,6 +270,10 @@ class Account(BaseModel):
                  in_use=False,
                  fail=True)
          .save())
+        (WorkerStatus
+         .delete()
+         .where((WorkerStatus.username == account['username']))
+         .execute())
 
     # Sets the shadowban flag of an account
     @staticmethod
@@ -278,6 +282,10 @@ class Account(BaseModel):
                  in_use=False,
                  shadowban=True)
          .save())
+        (WorkerStatus
+         .delete()
+         .where((WorkerStatus.username == account['username']))
+         .execute())
 
     # Sets the warn flag of an account. Usage still possible in the future.
     @staticmethod
@@ -294,6 +302,10 @@ class Account(BaseModel):
                  instance_name=None,
                  banned=True)
          .save())
+        (WorkerStatus
+         .delete()
+         .where((WorkerStatus.username == account['username']))
+         .execute())
 
 
 class Pokemon(BaseModel):
@@ -2956,7 +2968,7 @@ def clean_db_loop(args):
             query = (WorkerStatus
                      .delete()
                      .where((WorkerStatus.last_modified <
-                             (datetime.utcnow() - timedelta(minutes=30)))))
+                             (datetime.utcnow() - timedelta(minutes=5)))))
             query.execute()
 
             # Remove active modifier from expired lured pokestops.
