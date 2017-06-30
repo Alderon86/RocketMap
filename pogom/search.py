@@ -351,7 +351,6 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
     account_sets = AccountSet(args.hlvl_kph)
     threadStatus = {}
     key_scheduler = None
-    api_version = '0.63.1'
     api_check_time = 0
     hashkeys_last_upsert = timeit.default_timer()
     hashkeys_upsert_min_delay = 5.0
@@ -474,8 +473,9 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
 
         t = Thread(target=search_worker_thread,
                    name='search-worker-{}'.format(i),
-                   args=(args, account_queue, account_sets, account_failures,
-                         account_captchas, search_items_queue, pause_bit,
+                   args=(args, account_queue, account_sets,
+                         account_failures, account_captchas,
+                         search_items_queue, pause_bit,
                          threadStatus[workerId], db_updates_queue,
                          wh_queue, scheduler, key_scheduler))
         t.daemon = True
@@ -513,9 +513,8 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
                 scheduler_array[i].scanning_paused()
             # API Watchdog - Continue to check API version.
             if not args.no_version_check and not odt_triggered:
-                api_check_time = check_forced_version(args, api_version,
-                                                      api_check_time,
-                                                      pause_bit)
+                api_check_time = check_forced_version(
+                    args, api_check_time, pause_bit)
             time.sleep(1)
 
         # If a new location has been passed to us, get the most recent one.
@@ -590,8 +589,8 @@ def search_overseer_thread(args, new_location_queue, pause_bit, heartb,
 
         # API Watchdog - Check if Niantic forces a new API.
         if not args.no_version_check and not odt_triggered:
-            api_check_time = check_forced_version(args, api_version,
-                                                  api_check_time, pause_bit)
+            api_check_time = check_forced_version(
+                args, api_check_time, pause_bit)
 
         # Now we just give a little pause here.
         time.sleep(1)
@@ -751,9 +750,10 @@ def generate_hive_locations(current_location, step_distance,
     return results
 
 
-def search_worker_thread(args, account_queue, account_sets, account_failures,
-                         account_captchas, search_items_queue, pause_bit,
-                         status, dbq, whq, scheduler, key_scheduler):
+def search_worker_thread(args, account_queue, account_sets,
+                         account_failures, account_captchas,
+                         search_items_queue, pause_bit, status, dbq, whq,
+                         scheduler, key_scheduler):
 
     log.debug('Search worker thread starting...')
 
@@ -805,7 +805,7 @@ def search_worker_thread(args, account_queue, account_sets, account_failures,
             # for stat purposes.
             consecutive_noitems = 0
 
-            api = setup_api(args, status)
+            api = setup_api(args, status, account)
 
             # The forever loop for the searches.
             while True:
@@ -1079,13 +1079,14 @@ def search_worker_thread(args, account_queue, account_sets, account_failures,
                                     current_gym, len(gyms_to_update),
                                     step_location[0], step_location[1])
                             time.sleep(random.random() + 2)
-                            response = gym_request(api, step_location, gym)
+                            response = gym_request(api,  step_location, gym,
+                                                   args.api_version)
 
                             # Make sure the gym was in range. (Sometimes the
                             # API gets cranky about gyms that are ALMOST 1km
                             # away.)
                             if response['responses'][
-                                    'GET_GYM_DETAILS']['result'] == 2:
+                                    'GYM_GET_INFO']['result'] == 2:
                                 log.warning(
                                     ('Gym @ %f/%f is out of range (%dkm), ' +
                                      'skipping.'),
@@ -1093,7 +1094,7 @@ def search_worker_thread(args, account_queue, account_sets, account_failures,
                                     distance)
                             else:
                                 gym_responses[gym['gym_id']] = response[
-                                    'responses']['GET_GYM_DETAILS']
+                                    'responses']['GYM_GET_INFO']
                             del response
                             # Increment which gym we're on for status messages.
                             current_gym += 1
@@ -1208,44 +1209,47 @@ def map_request(api, position, no_jitter=False):
         req.check_awarded_badges()
         req.download_settings()
         req.get_buddy_walked()
+        req.get_inbox(is_history=True)
         response = req.call()
         response = clear_dict_response(response, True)
         return response
 
     except HashingOfflineException as e:
-        log.warning('Hashing server is unreachable, it might be offline.')
+        log.error('Hashing server is unreachable, it might be offline.')
     except BadHashRequestException as e:
-        log.warning('Invalid or expired hashing key: %s.',
-                    api._hash_server_token)
+        log.error('Invalid or expired hashing key: %s.',
+                  api._hash_server_token)
     except Exception as e:
-        log.warning('Exception while downloading map: %s', repr(e))
+        log.exception('Exception while downloading map: %s', repr(e))
         return False
 
 
-def gym_request(api, position, gym):
+def gym_request(api, position, gym, api_version):
     try:
-        log.debug('Getting details for gym @ %f/%f (%fkm away)',
+        log.debug('Getting details for gym @ %f/%f (%fkm away).',
                   gym['latitude'], gym['longitude'],
                   calc_distance(position, [gym['latitude'], gym['longitude']]))
         req = api.create_request()
-        req.get_gym_details(gym_id=gym['gym_id'],
-                            player_latitude=f2i(position[0]),
-                            player_longitude=f2i(position[1]),
-                            gym_latitude=gym['latitude'],
-                            gym_longitude=gym['longitude'])
+        req.gym_get_info(
+            gym_id=gym['gym_id'],
+            player_lat_degrees=f2i(position[0]),
+            player_lng_degrees=f2i(position[1]),
+            gym_lat_degrees=gym['latitude'],
+            gym_lng_degrees=gym['longitude'])
         req.check_challenge()
         req.get_hatched_eggs()
         req.get_inventory()
         req.check_awarded_badges()
         req.download_settings()
         req.get_buddy_walked()
-        x = req.call()
-        x = clear_dict_response(x)
+        req.get_inbox(is_history=True)
+        response = req.call()
+        response = clear_dict_response(response)
         # Print pretty(x).
-        return x
+        return response
 
     except Exception as e:
-        log.warning('Exception while downloading gym details: %s', repr(e))
+        log.exception('Exception while downloading gym details: %s.', repr(e))
         return False
 
 
@@ -1279,7 +1283,7 @@ def stat_delta(current_status, last_status, stat_name):
     return current_status.get(stat_name, 0) - last_status.get(stat_name, 0)
 
 
-def check_forced_version(args, api_version, api_check_time, pause_bit):
+def check_forced_version(args, api_check_time, pause_bit):
     if int(time.time()) > api_check_time:
         log.debug("Checking forced API version.")
         api_check_time = int(time.time()) + args.version_check_interval
@@ -1295,12 +1299,12 @@ def check_forced_version(args, api_version, api_check_time, pause_bit):
 
         # Got a response let's compare version numbers.
         try:
-            if StrictVersion(api_version) < StrictVersion(forced_api):
+            if StrictVersion(args.api_version) < StrictVersion(forced_api):
                 # Installed API version is lower. Pause scanning.
                 pause_bit.set()
                 log.warning('Started with API: %s, ' +
                             'Niantic forced to API: %s',
-                            api_version,
+                            args.api_version,
                             forced_api)
                 log.warning('Scanner paused due to forced Niantic API update.')
             else:

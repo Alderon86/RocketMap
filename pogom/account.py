@@ -22,12 +22,13 @@ class TooManyLoginAttempts(Exception):
 
 
 # Create the API object that'll be used to scan.
-def setup_api(args, status):
+def setup_api(args, status, account):
     # Create the API instance this will use.
     if args.mock != '':
         api = FakePogoApi(args.mock)
     else:
-        device_info = generate_device_info()
+        identifier = account['username'] + account['password']
+        device_info = generate_device_info(identifier)
         api = PGoApi(device_info=device_info)
 
     # New account - new proxy.
@@ -335,6 +336,7 @@ def spin_pokestop_request(api, fort, step_location):
         req.check_awarded_badges()
         req.download_settings()
         req.get_buddy_walked()
+        req.get_inbox(is_history=True)
         spin_pokestop_response = req.call()
 
         return spin_pokestop_response
@@ -359,6 +361,7 @@ def encounter_pokemon_request(api, encounter_id, spawnpoint_id, scan_location):
         req.check_awarded_badges()
         req.download_settings()
         req.get_buddy_walked()
+        req.get_inbox(is_history=True)
         encounter_result = req.call()
 
         return encounter_result
