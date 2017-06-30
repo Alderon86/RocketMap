@@ -273,9 +273,7 @@ def check_login(args, account, api, position, proxy_url):
         request.check_awarded_badges()
         request.download_settings(hash=account['remote_config']['hash'])
         request.get_buddy_walked()
-        request.get_inbox(is_history=True,
-                          is_reverse=False,
-                          not_before_ms=0)
+        request.get_inbox(is_history=True)
         response = request.call()
         parse_get_inventory(account, response)
         time.sleep(random.uniform(.45, .7))
@@ -287,7 +285,7 @@ def check_login(args, account, api, position, proxy_url):
 
     # TODO: # 9 - Make a request to get Shop items.
 
-    log.debug('Login for account %s successful.', account['username'])
+    log.info('App login for account %s successful.', account['username'])
     time.sleep(random.uniform(10, 20))
 
 
@@ -514,9 +512,7 @@ def spin_pokestop_request(api, account, fort, step_location):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        req.get_inbox(is_history=True,
-                      is_reverse=False,
-                      not_before_ms=0)
+        req.get_inbox(is_history=True)
         response = req.call()
         parse_get_inventory(account, response)
 

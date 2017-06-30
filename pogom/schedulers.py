@@ -624,8 +624,9 @@ class SpeedScan(HexSearch):
 
     # How long to delay since last action
     def delay(self, last_scan_date):
-        return max(((last_scan_date - datetime.utcnow()).total_seconds() +
-                    self.args.scan_delay), 10)
+        return min(max(((last_scan_date - datetime.utcnow()).total_seconds() +
+                       self.args.scan_delay), 10),
+                   90)
 
     def band_status(self):
         try:
@@ -1012,9 +1013,10 @@ class SpeedScan(HexSearch):
                 return -1, 0, 0, 0, messages, 0
 
             distance = equi_rect_distance(loc, worker_loc)
-            if (distance >
+            if ((distance >
                     (now_date - last_action).total_seconds() *
-                    self.args.kph / 3600):
+                    self.args.kph / 3600) and
+                    (now_date - last_action).total_seconds() < 90):
                 # Flag item as "parked" by a specific thread, because
                 # we're waiting for it. This will avoid all threads "walking"
                 # to the same item.

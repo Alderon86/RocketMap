@@ -1233,9 +1233,7 @@ def map_request(api, account, position, no_jitter=False):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        req.get_inbox(is_history=True,
-                      is_reverse=False,
-                      not_before_ms=0)
+        req.get_inbox(is_history=True)
         response = req.call()
 
         response = clear_dict_response(response, True)
@@ -1269,9 +1267,7 @@ def gym_request(api, account, position, gym, api_version):
         req.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         req.check_awarded_badges()
         req.get_buddy_walked()
-        req.get_inbox(is_history=True,
-                      is_reverse=False,
-                      not_before_ms=0)
+        req.get_inbox(is_history=True)
         response = req.call()
 
         parse_get_inventory(account, response)
@@ -1400,6 +1396,7 @@ def get_api_version(args):
 def add_accounts_to_queue(args, account_queue, number,
                           min_level=1, max_level=40, init=False):
     accounts = []
+    retry_delay = 0
     while len(accounts) < number:
         accounts = Account.get_accounts((number - len(accounts)),
                                         min_level=min_level,
@@ -1409,9 +1406,10 @@ def add_accounts_to_queue(args, account_queue, number,
             account_queue.put(a)
 
         if len(accounts) < number:
-            log.error('Got only {} / {} accounts. Retrying in {} s.',
-                      len(accounts), number, args.login_delay)
-            time.sleep(args.login_delay)
+            retry_delay += args.login_delay
+            log.error('Got only {} / {} account(s). Retrying in {} s.',
+                      len(accounts), number, retry_delay)
+            time.sleep(retry_delay)
 
     log.info('Loaded {} accounts from the DB.'.format(number))
     return account_queue
