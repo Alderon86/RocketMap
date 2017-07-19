@@ -687,23 +687,23 @@ def parse_download_settings(account, api_response):
             'hash': download_settings.hash,
             'asset_time': asset_time,
             'template_time': template_time,
-            'gmo_min_distance': int(download_settings
+            'gmo_min_distance': (download_settings
                                  .settings
                                  .map_settings
                                  .get_map_objects_min_distance_meters),
-            'gmo_min_interval': int(download_settings
+            'gmo_min_interval': (download_settings
                                  .settings
                                  .map_settings
                                  .get_map_objects_min_refresh_seconds),
-            'gmo_max_interval': int(download_settings
+            'gmo_max_interval': (download_settings
                                  .settings
                                  .map_settings
                                  .get_map_objects_max_refresh_seconds),
-            'fort_interaction_range': int(download_settings
+            'fort_interaction_range': (download_settings
                                        .settings
                                        .fort_settings
                                        .interaction_range_meters),
-            'fort_far_interaction_range': int(download_settings
+            'fort_far_interaction_range': (download_settings
                                            .settings
                                            .fort_settings
                                            .far_interaction_range_meters)

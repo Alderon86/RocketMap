@@ -431,11 +431,11 @@ class Settings(BaseModel):
     hash = Utf8mb4CharField(max_length=40)
     asset_time = IntegerField()
     template_time = IntegerField()
-    gmo_min_distance = SmallIntegerField()
-    gmo_min_interval = SmallIntegerField()
-    gmo_max_interval = SmallIntegerField()
-    fort_interaction_range = SmallIntegerField()
-    fort_far_interaction_range = SmallIntegerField()
+    gmo_min_distance = FloatField()
+    gmo_min_interval = FloatField()
+    gmo_max_interval = FloatField()
+    fort_interaction_range = FloatField()
+    fort_far_interaction_range = FloatField()
 
     @staticmethod
     def get_remote_config():
