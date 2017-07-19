@@ -6,7 +6,6 @@ import time
 import random
 from threading import Lock
 from timeit import default_timer
-from datetime import datetime
 
 from pgoapi import PGoApi
 from pgoapi.exceptions import AuthException
