@@ -6,10 +6,12 @@ import time
 import random
 from threading import Lock
 from timeit import default_timer
+from datetime import datetime
 
 from pgoapi import PGoApi
 from pgoapi.exceptions import AuthException
 
+from . import config
 from .fakePogoApi import FakePogoApi
 from .utils import (in_radius, generate_device_info, equi_rect_distance,
                     clear_dict_response)
@@ -167,7 +169,8 @@ def rpc_login_sequence(args, api, account):
 
     # 3 - Get remote config version.
     log.debug('Downloading remote config version...')
-    old_config = account.get('remote_config', {})
+    from .models import Settings
+    old_remote_config = Settings.get_remote_config()
 
     try:
         request = api.create_request()
@@ -199,9 +202,10 @@ def rpc_login_sequence(args, api, account):
 
     # 4 - Get asset digest.
     log.debug('Fetching asset digest...')
-    config = account.get('remote_config', {})
+    remote_config = config.get('remote_config', {})
 
-    if config.get('asset_time', 0) > old_config.get('asset_time', 0):
+    if (remote_config.get('asset_time', 0) >
+            old_remote_config.get('asset_time', 0)):
         i = random.randint(0, 3)
         req_count = 0
         result = 2
@@ -223,8 +227,7 @@ def rpc_login_sequence(args, api, account):
             request.get_inventory(last_timestamp_ms=account[
                 'last_timestamp_ms'])
             request.check_awarded_badges()
-            request.download_settings(hash=account[
-                'remote_config']['hash'])
+            request.download_settings(hash=remote_config['hash'])
             response = request.call(False)
 
             parse_new_timestamp_ms(account, response)
@@ -254,7 +257,8 @@ def rpc_login_sequence(args, api, account):
     # 5 - Get item templates.
     log.debug('Fetching item templates...')
 
-    if config.get('template_time', 0) > old_config.get('template_time', 0):
+    if (remote_config.get('template_time', 0) >
+            old_remote_config.get('template_time', 0)):
         i = random.randint(0, 3)
         req_count = 0
         result = 2
@@ -273,7 +277,7 @@ def rpc_login_sequence(args, api, account):
                 last_timestamp_ms=account['last_timestamp_ms'])
             request.check_awarded_badges()
             request.download_settings(
-                hash=account['remote_config']['hash'])
+                hash=remote_config['hash'])
             response = request.call(False)
 
             parse_new_timestamp_ms(account, response)
@@ -310,7 +314,7 @@ def rpc_login_sequence(args, api, account):
         request.get_hatched_eggs()
         request.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         request.check_awarded_badges()
-        request.download_settings(hash=account['remote_config']['hash'])
+        request.download_settings(hash=remote_config['hash'])
         request.get_buddy_walked()
         response = request.call(False)
 
@@ -351,7 +355,7 @@ def rpc_login_sequence(args, api, account):
         request.get_hatched_eggs()
         request.get_inventory(last_timestamp_ms=account['last_timestamp_ms'])
         request.check_awarded_badges()
-        request.download_settings(hash=account['remote_config']['hash'])
+        request.download_settings(hash=remote_config['hash'])
         request.get_buddy_walked()
         request.get_inbox(is_history=True)
         response = request.call(False)
@@ -648,6 +652,8 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
 
 
 def parse_download_settings(account, api_response):
+    remote_config = 0
+    download_settings = 0
     if 'DOWNLOAD_REMOTE_CONFIG_VERSION' in api_response['responses']:
         remote_config = (api_response['responses']
                          .get('DOWNLOAD_REMOTE_CONFIG_VERSION'))
@@ -656,23 +662,54 @@ def parse_download_settings(account, api_response):
         # empty, they will return 0.
         asset_time = remote_config.asset_digest_timestamp_ms / 1000000
         template_time = remote_config.item_templates_timestamp_ms / 1000
-
         if asset_time == 0 or asset_time is None:
             raise NullTimeException(type="asset")
+
         if template_time == 0 or template_time is None:
             raise NullTimeException(type="template")
 
-        download_settings = {}
-        download_settings['hash'] = api_response['responses'][
-            'DOWNLOAD_SETTINGS'].hash
-        download_settings['asset_time'] = asset_time
-        download_settings['template_time'] = template_time
+    if 'DOWNLOAD_SETTINGS' in api_response['responses']:
+        download_settings = (api_response['responses']
+                             .get('DOWNLOAD_SETTINGS', 0))
 
-        account['remote_config'] = download_settings
-
-        log.debug('Download settings for account %s: %s.',
-                  account['username'],
-                  download_settings)
+    if remote_config and download_settings:
+        config['remote_config'] = {
+            'hash': download_settings.hash,
+            'asset_time': asset_time,
+            'template_time': template_time
+        }
+        from .models import db_schema_version
+        config['settings'] = {
+            'db_version': db_schema_version,
+            'min_client_version': (download_settings
+                                   .settings
+                                   .minimum_client_version),
+            'hash': download_settings.hash,
+            'asset_time': asset_time,
+            'template_time': template_time,
+            'gmo_min_distance': int(download_settings
+                                 .settings
+                                 .map_settings
+                                 .get_map_objects_min_distance_meters),
+            'gmo_min_interval': int(download_settings
+                                 .settings
+                                 .map_settings
+                                 .get_map_objects_min_refresh_seconds),
+            'gmo_max_interval': int(download_settings
+                                 .settings
+                                 .map_settings
+                                 .get_map_objects_max_refresh_seconds),
+            'fort_interaction_range': int(download_settings
+                                       .settings
+                                       .fort_settings
+                                       .interaction_range_meters),
+            'fort_far_interaction_range': int(download_settings
+                                           .settings
+                                           .fort_settings
+                                           .far_interaction_range_meters)
+        }
+        log.debug('Remote config: %s', config['remote_config'])
+        log.debug('Download settings: %s', config['settings'])
         return True
 
 

@@ -43,7 +43,9 @@ from pgoapi.utilities import f2i
 from pgoapi import utilities as util
 from pgoapi.hash_server import (HashServer, BadHashRequestException,
                                 HashingOfflineException)
-from .models import (parse_map, GymDetails, parse_gyms, MainWorker,
+
+from . import config
+from .models import (Settings, parse_map, GymDetails, parse_gyms, MainWorker,
                      WorkerStatus, HashKeys)
 from .utils import now, clear_dict_response, equi_rect_distance
 from .transform import get_new_coords, jitter_location
@@ -940,6 +942,10 @@ def search_worker_thread(args, account_queue, account_sets,
                 status['message'] = 'Logging in...'
                 check_login(args, account, api, step_location,
                             status['proxy_url'])
+                db_settings = {
+                    config['settings']['db_version']: config['settings']
+                }
+                dbq.put((Settings, db_settings))
 
                 # Only run this when it's the account's first login, after
                 # check_login().
