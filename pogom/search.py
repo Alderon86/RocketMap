@@ -989,8 +989,18 @@ def search_worker_thread(args, account_queue, account_sets,
                         last_location[2] + factor * (step_location[2] -
                                                      last_location[2])
                     )
-                    map_request(api, account, walk_location, args.no_jitter)
-                    time.sleep(10)
+                    scan_date = datetime.utcnow()
+                    response_dict = map_request(api, account, walk_location,
+                                                args.no_jitter)
+                    parsed = parse_map(args, response_dict, walk_location,
+                                       dbq, whq, key_scheduler, api, status,
+                                       scan_date, account, account_sets)
+                    status['last_scan_date'] = datetime.utcnow()
+                    status['message'] = ('Search at {:6f},{:6f} completed ' +
+                                         'with {} finds.').format(
+                        walk_location[0], walk_location[1],
+                        parsed['count'])
+                    time.sleep(config['settings']['gmo_min_interval'])
 
                 # Make the actual request.
                 scan_date = datetime.utcnow()
@@ -1182,7 +1192,9 @@ def search_worker_thread(args, account_queue, account_sets,
                               key_instance['maximum'])
 
                 # Delay the desired amount after "scan" completion.
-                delay = 30  # scheduler.delay(status['last_scan_date'])
+                delay = min(config['settings']
+                                  ['gmo_max_interval'],
+                            scheduler.delay(status['last_scan_date']))
 
                 status['message'] += ' Sleeping {}s until {}.'.format(
                     delay,
