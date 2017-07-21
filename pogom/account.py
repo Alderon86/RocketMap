@@ -553,7 +553,8 @@ def spin_pokestop(api, account, fort, step_location):
         fort_details_request(api, account, fort)
         time.sleep(random.uniform(0.8, 1.8))  # Don't let Niantic throttle
         response = spin_pokestop_request(api, account, fort, step_location)
-        time.sleep(random.uniform(2, 4))  # Don't let Niantic throttle.
+        # Don't let Niantic throttle.
+        time.sleep(config['settings']['gmo_min_interval'])
 
         # Check for reCaptcha
         captcha_url = response['responses']['CHECK_CHALLENGE'].challenge_url

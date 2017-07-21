@@ -817,6 +817,7 @@ def search_worker_thread(args, account_queue, account_sets,
             # The forever loop for the searches.
             step_location = (0, 0, 0)
             last_location = (0, 0, 0)
+            account['last_location'] = None
             while True:
                 status['active'] = True
                 while is_paused(control_flags):
@@ -971,15 +972,24 @@ def search_worker_thread(args, account_queue, account_sets,
                 status['message'] = messages['search']
                 log.info(status['message'])
 
+                # This check is important so we don't start at (0,0,0)
+                if account['last_location'] is None:
+                    last_location = step_location
+                    account['last_location'] = last_location
+                else:
+                    last_location = account['last_location']
                 distance = (equi_rect_distance(last_location, step_location) *
                             1000.0)
                 mps = args.kph / 3.6
                 count = int(distance/mps/10)
                 walk_location = copy.deepcopy(last_location)
+                # These logs are for debug only. Remove later
+                log.info('Distance= ' + str(distance))
+                log.info('Count= ' + str(count))
                 for i in range(1, count):
-                    if count > 8:
-                        break
-
+                    # These logs are for debug only. Remove later
+                    log.info('Last location: ' + str(last_location))
+                    log.info('Step location: ' + str(step_location))
                     factor = i/float(count)
                     walk_location = (
                         last_location[0] + factor * (step_location[0] -
@@ -1007,6 +1017,7 @@ def search_worker_thread(args, account_queue, account_sets,
                 response_dict = map_request(api, account, step_location,
                                             args.no_jitter)
                 last_location = copy.deepcopy(step_location)
+                account['last_location'] = last_location
                 status['last_scan_date'] = datetime.utcnow()
 
                 # Record the time and the place that the worker made the

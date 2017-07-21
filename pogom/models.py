@@ -2393,7 +2393,7 @@ def encounter_pokemon(args, pokemon, account, api, account_sets, status,
             hlvl_account = account_sets.next('30', scan_location)
             using_accountset = True
 
-        time.sleep(args.encounter_delay)
+            time.sleep(config['settings']['gmo_min_interval'])
 
         # If we didn't get an account, we can't encounter.
         if not hlvl_account:
