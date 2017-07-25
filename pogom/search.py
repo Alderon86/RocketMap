@@ -990,15 +990,18 @@ def search_worker_thread(args, account_queue, account_sets,
                     factor = i/float(count)
                     walk_location = (
                         last_location[0] + factor * (step_location[0] -
-                                                     account['last_location'][0]),
+                                                     account[
+                                                        'last_location'][0]),
                         last_location[1] + factor * (step_location[1] -
-                                                     account['last_location'][1]),
+                                                     account[
+                                                        'last_location'][1]),
                         last_location[2] + factor * (step_location[2] -
-                                                     account['last_location'][2])
+                                                     account[
+                                                        'last_location'][2])
                     )
                     now_time = timeit.default_timer()
                     time_passed_sec = now_time - last_gmo
-                    log.info(time_passed_sec)
+                    log.info('Time passed since last GMO: %s', time_passed_sec)
                     if time_passed_sec >= gmo_min_interval:
                         # Make the actual request.
                         scan_date = datetime.utcnow()
@@ -1043,7 +1046,8 @@ def search_worker_thread(args, account_queue, account_sets,
                         scan_date = datetime.utcnow()
                         response_dict = map_request(api, account,
                                                     step_location,
-                                                    args.no_jitter, walk_location)
+                                                    args.no_jitter,
+                                                    walk_location)
                     elif captcha is not None:
                         account_queue.task_done()
                         time.sleep(3)
@@ -1199,8 +1203,7 @@ def search_worker_thread(args, account_queue, account_sets,
                               key_instance['maximum'])
 
                 # Delay the desired amount after "scan" completion.
-                delay = (config['settings']['gmo_min_interval'] +
-                         scheduler.delay(status['last_scan_date']))
+                delay = config['settings']['gmo_min_interval']
 
                 status['message'] += ' Sleeping {}s until {}.'.format(
                     delay,
