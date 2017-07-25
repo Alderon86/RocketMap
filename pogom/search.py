@@ -818,8 +818,6 @@ def search_worker_thread(args, account_queue, account_sets,
             step_location = (0, 0, 0)
             last_location = (0, 0, 0)
             account['last_location'] = None
-            last_gmo = timeit.default_timer()
-            gmo_min_interval = config['settings']['gmo_min_interval']
             while True:
                 status['active'] = True
                 while is_paused(control_flags):
@@ -973,6 +971,8 @@ def search_worker_thread(args, account_queue, account_sets,
                 # aren't out of order.
                 status['message'] = messages['search']
                 log.info(status['message'])
+                last_gmo = timeit.default_timer()
+                gmo_min_interval = config['settings']['gmo_min_interval']
 
                 # This check is important so we don't start at (0,0,0)
                 if account['last_location'] is None:
@@ -986,30 +986,31 @@ def search_worker_thread(args, account_queue, account_sets,
                 mps = args.kph / 3.6
                 count = int(distance/mps/10)
                 walk_location = copy.deepcopy(last_location)
-                for i in range(1, count):
-                    if count > 8:
-                        break
-
+                for i in range(count):
                     factor = i/float(count)
                     walk_location = (
                         last_location[0] + factor * (step_location[0] -
-                                                     last_location[0]),
+                                                     account['last_location'][0]),
                         last_location[1] + factor * (step_location[1] -
-                                                     last_location[1]),
+                                                     account['last_location'][1]),
                         last_location[2] + factor * (step_location[2] -
-                                                     last_location[2])
+                                                     account['last_location'][2])
                     )
-                now_time = timeit.default_timer()
-                time_passed_sec = now_time - last_gmo
-                log.info(time_passed_sec)
-                if time_passed_sec >= gmo_min_interval:
-                    # Make the actual request.
-                    scan_date = datetime.utcnow()
-                    response_dict = map_request(api, account,
-                                                walk_location,
-                                                args.no_jitter)
-                    last_gmo = timeit.default_timer()
+                    now_time = timeit.default_timer()
+                    time_passed_sec = now_time - last_gmo
+                    log.info(time_passed_sec)
+                    if time_passed_sec >= gmo_min_interval:
+                        # Make the actual request.
+                        scan_date = datetime.utcnow()
+                        response_dict = map_request(api, account,
+                                                    walk_location,
+                                                    args.no_jitter)
+                        last_gmo = timeit.default_timer()
 
+                # Make the actual request.
+                scan_date = datetime.utcnow()
+                response_dict = map_request(api, account, step_location,
+                                            args.no_jitter)
                 last_location = copy.deepcopy(step_location)
                 account['last_location'] = last_location
                 status['last_scan_date'] = datetime.utcnow()
@@ -1041,16 +1042,17 @@ def search_worker_thread(args, account_queue, account_sets,
                         # since the previous one was captcha'd.
                         scan_date = datetime.utcnow()
                         response_dict = map_request(api, account,
-                                                    walk_location,
-                                                    args.no_jitter)
+                                                    step_location,
+                                                    args.no_jitter, walk_location)
                     elif captcha is not None:
                         account_queue.task_done()
                         time.sleep(3)
                         break
 
-                    parsed = parse_map(args, response_dict, walk_location,
+                    parsed = parse_map(args, response_dict, step_location,
                                        dbq, whq, key_scheduler, api, status,
-                                       scan_date, account, account_sets)
+                                       scan_date, account, account_sets,
+                                       walk_location)
                     del response_dict
                     scheduler.task_done(status, parsed)
                     if parsed['count'] > 0:
@@ -1197,9 +1199,8 @@ def search_worker_thread(args, account_queue, account_sets,
                               key_instance['maximum'])
 
                 # Delay the desired amount after "scan" completion.
-                delay = min(config['settings']
-                                  ['gmo_max_interval'],
-                            scheduler.delay(status['last_scan_date']))
+                delay = (config['settings']['gmo_min_interval'] +
+                         scheduler.delay(status['last_scan_date']))
 
                 status['message'] += ' Sleeping {}s until {}.'.format(
                     delay,
