@@ -999,8 +999,8 @@ def search_worker_thread(args, account_queue, account_sets,
                         last_location[2] + factor * (step_location[2] -
                                                      last_location[2])
                     )
-                now = default_timer()
-                time_passed_sec = now - last_gmo
+                time = timeit.default_timer()
+                time_passed_sec = time - last_gmo
                 log.info(time_passed_sec)
                 if time_passed_sec >= gmo_min_interval:
                     # Make the actual request.
@@ -1008,7 +1008,7 @@ def search_worker_thread(args, account_queue, account_sets,
                     response_dict = map_request(api, account,
                                                 walk_location,
                                                 args.no_jitter)
-                    last_gmo = default_timer()
+                    last_gmo = timeit.default_timer()
 
                 last_location = copy.deepcopy(step_location)
                 account['last_location'] = last_location
