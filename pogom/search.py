@@ -818,7 +818,7 @@ def search_worker_thread(args, account_queue, account_sets,
             step_location = (0, 0, 0)
             last_location = (0, 0, 0)
             account['last_location'] = None
-            last_gmo = default_timer()
+            last_gmo = timeit.default_timer()
             gmo_min_interval = config['settings']['gmo_min_interval']
             while True:
                 status['active'] = True
@@ -982,7 +982,7 @@ def search_worker_thread(args, account_queue, account_sets,
                     last_location = account['last_location']
                 distance = (equi_rect_distance(last_location, step_location) *
                             1000.0)
-                last_gmo = default_timer()
+                last_gmo = timeit.default_timer()
                 mps = args.kph / 3.6
                 count = int(distance/mps/10)
                 walk_location = copy.deepcopy(last_location)
@@ -999,8 +999,8 @@ def search_worker_thread(args, account_queue, account_sets,
                         last_location[2] + factor * (step_location[2] -
                                                      last_location[2])
                     )
-                time = timeit.default_timer()
-                time_passed_sec = time - last_gmo
+                now_time = timeit.default_timer()
+                time_passed_sec = now_time - last_gmo
                 log.info(time_passed_sec)
                 if time_passed_sec >= gmo_min_interval:
                     # Make the actual request.
@@ -1211,9 +1211,9 @@ def search_worker_thread(args, account_queue, account_sets,
 
         # Catch any process exceptions, log them, and continue the thread.
         except Exception as e:
-            log.error((
-                'Exception in search_worker under account {} Exception ' +
-                'message: {}.').format(account['username'], repr(e)))
+            log.exception(
+                'Exception in search_worker under account %s Exception ' +
+                'message: %s.', account['username'], e)
             status['active'] = False
             status['message'] = (
                 'Exception in search_worker using account {}. Restarting ' +
