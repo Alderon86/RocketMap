@@ -818,6 +818,8 @@ def search_worker_thread(args, account_queue, account_sets,
             step_location = (0, 0, 0)
             last_location = (0, 0, 0)
             account['last_location'] = None
+            last_gmo = default_timer()
+            gmo_min_interval = config['settings']['gmo_min_interval']
             while True:
                 status['active'] = True
                 while is_paused(control_flags):
@@ -980,16 +982,14 @@ def search_worker_thread(args, account_queue, account_sets,
                     last_location = account['last_location']
                 distance = (equi_rect_distance(last_location, step_location) *
                             1000.0)
+                last_gmo = default_timer()
                 mps = args.kph / 3.6
                 count = int(distance/mps/10)
                 walk_location = copy.deepcopy(last_location)
-                # These logs are for debug only. Remove later
-                log.info('Distance= ' + str(distance))
-                log.info('Count= ' + str(count))
                 for i in range(1, count):
-                    # These logs are for debug only. Remove later
-                    log.info('Last location: ' + str(last_location))
-                    log.info('Step location: ' + str(step_location))
+                    if count > 8:
+                        break
+
                     factor = i/float(count)
                     walk_location = (
                         last_location[0] + factor * (step_location[0] -
@@ -999,23 +999,17 @@ def search_worker_thread(args, account_queue, account_sets,
                         last_location[2] + factor * (step_location[2] -
                                                      last_location[2])
                     )
+                now = default_timer()
+                time_passed_sec = now - last_gmo
+                log.info(time_passed_sec)
+                if time_passed_sec >= gmo_min_interval:
+                    # Make the actual request.
                     scan_date = datetime.utcnow()
-                    response_dict = map_request(api, account, walk_location,
+                    response_dict = map_request(api, account,
+                                                walk_location,
                                                 args.no_jitter)
-                    parsed = parse_map(args, response_dict, walk_location,
-                                       dbq, whq, key_scheduler, api, status,
-                                       scan_date, account, account_sets)
-                    status['last_scan_date'] = datetime.utcnow()
-                    status['message'] = ('Search at {:6f},{:6f} completed ' +
-                                         'with {} finds.').format(
-                        walk_location[0], walk_location[1],
-                        parsed['count'])
-                    time.sleep(config['settings']['gmo_min_interval'])
+                    last_gmo = default_timer()
 
-                # Make the actual request.
-                scan_date = datetime.utcnow()
-                response_dict = map_request(api, account, step_location,
-                                            args.no_jitter)
                 last_location = copy.deepcopy(step_location)
                 account['last_location'] = last_location
                 status['last_scan_date'] = datetime.utcnow()
@@ -1041,20 +1035,20 @@ def search_worker_thread(args, account_queue, account_sets,
                     captcha = handle_captcha(args, status, api, account,
                                              account_failures,
                                              account_captchas, whq,
-                                             response_dict, step_location)
+                                             response_dict, walk_location)
                     if captcha is not None and captcha:
                         # Make another request for the same location
                         # since the previous one was captcha'd.
                         scan_date = datetime.utcnow()
                         response_dict = map_request(api, account,
-                                                    step_location,
+                                                    walk_location,
                                                     args.no_jitter)
                     elif captcha is not None:
                         account_queue.task_done()
                         time.sleep(3)
                         break
 
-                    parsed = parse_map(args, response_dict, step_location,
+                    parsed = parse_map(args, response_dict, walk_location,
                                        dbq, whq, key_scheduler, api, status,
                                        scan_date, account, account_sets)
                     del response_dict
