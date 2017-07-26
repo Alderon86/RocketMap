@@ -11,7 +11,8 @@ from pgoapi import PGoApi
 from pgoapi.exceptions import AuthException
 
 from .fakePogoApi import FakePogoApi
-from .utils import (in_radius, generate_device_info, equi_rect_distance)
+from .utils import (in_radius, generate_device_info, equi_rect_distance,
+                    clear_dict_response)
 from .proxy import get_new_proxy
 
 log = logging.getLogger(__name__)
@@ -47,8 +48,7 @@ def setup_api(args, status, account):
         # If proxy is not assigned yet or if proxy-rotation is defined
         # - query for new proxy.
         if ((not status['proxy_url']) or
-                ((args.proxy_rotation is not None) and
-                 (args.proxy_rotation != 'none'))):
+                (args.proxy_rotation != 'none')):
 
             proxy_num, status['proxy_url'] = get_new_proxy(args)
             if args.proxy_display.upper() != 'FULL':
@@ -61,6 +61,12 @@ def setup_api(args, status, account):
         api.set_proxy({
             'http': status['proxy_url'],
             'https': status['proxy_url']})
+        if (status['proxy_url'] not in args.proxy):
+            log.warning(
+                'Tried replacing proxy %s with a new proxy, but proxy ' +
+                'rotation is disabled ("none"). If this isn\'t intentional, ' +
+                'enable proxy rotation.',
+                status['proxy_url'])
 
     return api
 
@@ -180,9 +186,11 @@ def rpc_login_sequence(args, api, account):
         total_req += 1
         time.sleep(random.uniform(.53, 1.1))
     except NullTimeException as e:
-        log.exception('Could not get %s time for Account %s, '
-                      + 'probably banned or Hashing error. Exception: %s.',
-                      e.type, account['username'], e)
+        log.exception("Couldn't get %s time for account %s, the account may"
+                      + ' be banned. Exception: %s.',
+                      e.type,
+                      account['username'],
+                      e)
     except Exception as e:
         log.exception('Error while downloading remote config: %s.', e)
         raise LoginSequenceFail('Failed while getting remote config version in'
@@ -633,7 +641,7 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
         req.get_inbox(is_history=True)
         response = req.call(False)
         parse_new_timestamp_ms(account, response)
-        return response
+        return clear_dict_response(response)
     except Exception as e:
         log.exception('Exception while encountering Pokémon: %s.', repr(e))
         return False
@@ -642,7 +650,10 @@ def encounter_pokemon_request(api, account, encounter_id, spawnpoint_id,
 def parse_download_settings(account, api_response):
     if 'DOWNLOAD_REMOTE_CONFIG_VERSION' in api_response['responses']:
         remote_config = (api_response['responses']
-                         .get('DOWNLOAD_REMOTE_CONFIG_VERSION', 0))
+                         .get('DOWNLOAD_REMOTE_CONFIG_VERSION'))
+
+        # We're accessing a protobuf. Keys will always exist, but if they're
+        # empty, they will return 0.
         asset_time = remote_config.asset_digest_timestamp_ms / 1000000
         template_time = remote_config.item_templates_timestamp_ms / 1000
 
