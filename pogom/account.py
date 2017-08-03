@@ -11,6 +11,7 @@ from pgoapi import PGoApi
 from pgoapi.exceptions import AuthException
 
 from .fakePogoApi import FakePogoApi
+from .pgoapiwrapper import PGoApiWrapper
 from .utils import (in_radius, generate_device_info, equi_rect_distance,
                     clear_dict_response)
 from .proxy import get_new_proxy
@@ -41,7 +42,7 @@ def setup_api(args, status, account):
     else:
         identifier = account['username'] + account['password']
         device_info = generate_device_info(identifier)
-        api = PGoApi(device_info=device_info)
+        api = PGoApiWrapper(PGoApi(device_info=device_info))
 
     # New account - new proxy.
     if args.proxy:
@@ -327,19 +328,22 @@ def rpc_login_sequence(args, api, account):
                                 + ' login sequence for account %s.',
                                 account['username'])
 
-    # Needs updated PGoApi to be used.
-    # log.debug('Retrieving Store Items...')
-    # try:  # 7 - Make an empty request to retrieve store items.
-    #    request = api.create_request()
-    #    request.get_store_items()
-    #    response = request.call()
-    #    total_req += 1
-    #    time.sleep(random.uniform(.6, 1.1))
-    # except Exception as e:
-    #    log.exception('Login for account %s failed. Exception in ' +
-    #                  'retrieving Store Items: %s.', account['username'],
-    #                  e)
-    #    raise LoginSequenceFail('Failed during login sequence.')
+    log.debug('Retrieving Store Items...')
+    try:  # 7 - Make an empty request to retrieve store items.
+        request = api.create_request()
+        request.get_store_items()
+        response = request.call()
+        total_req += 1
+        time.sleep(random.uniform(.6, 1.1))
+    except Exception as e:
+        log.exception('Login for account %s failed.' +
+                      ' Exception occurred while fetching store items:' +
+                      ' %s.',
+                      account['username'],
+                      e)
+        raise LoginSequenceFail('Failed while getting store items in login' +
+                                ' sequence for account %s.',
+                                account['username'])
 
     # 8 - Check if there are level up rewards to claim.
     log.debug('Checking if there are level up rewards to claim...')
